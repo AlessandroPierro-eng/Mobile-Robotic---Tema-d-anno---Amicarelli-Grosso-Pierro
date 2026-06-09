@@ -21,8 +21,3 @@ Il sistema è diviso in tre fasi principali:
 
 ## 🚀 Come avviare l'ambiente di sviluppo
 Abbiamo containerizzato l'intero workspace per garantire la massima riproducibilità. Assicurati di avere **Docker** installato e in esecuzione.
-
-1. Costruisci l'immagine Docker:
-   ```bash
-   cd docker_ws
-   ./build.sh
