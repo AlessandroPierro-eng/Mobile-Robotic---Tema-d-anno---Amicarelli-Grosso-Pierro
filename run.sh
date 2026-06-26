@@ -9,5 +9,5 @@ docker run -it --rm \
     --volume="/tmp/.X11-unix:/tmp/.X11-unix:rw" \
     --volume="$(pwd)/ros_ws:/root/ros_workspace" \
     --name security_fleet_container \
-    mr_project_image \
+    mr05_project_image \
     bash

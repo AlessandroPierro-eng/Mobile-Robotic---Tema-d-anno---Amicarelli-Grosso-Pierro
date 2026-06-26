@@ -81,7 +81,8 @@ def generate_launch_description():
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
-        parameters=[{'robot_description': Command(['xacro ', xacro_file])}]
+        # parameters=[{'robot_description': Command(['xacro ', xacro_file])}]
+        parameters=[{'robot_description': Command(['xacro ', urdf_file, ' gazebo:=ignition'])}]
     )
 
     # 4. SPAWN DEL ROBOT NEL MAGAZZINO

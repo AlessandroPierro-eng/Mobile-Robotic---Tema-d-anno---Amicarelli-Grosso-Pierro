@@ -19,11 +19,16 @@
   <xacro:property name="base_frame" value="${name}_link"/>
 
   <!-- Base frame -->
-  <joint name="${name}_joint" type="continuous">
+  <!-- <joint name="${name}_joint" type="continuous">
     <parent link="${parent_link}"/>
     <child link="${base_frame}"/>
     <xacro:insert_block name="origin"/>
     <axis xyz="0 0 1"/>
+  </joint> -->
+  <joint name="${name}_joint" type="fixed">
+    <parent link="${parent_link}"/>
+    <child link="${base_frame}"/>
+    <xacro:insert_block name="origin"/>
   </joint>
 
   <link name="${base_frame}">
