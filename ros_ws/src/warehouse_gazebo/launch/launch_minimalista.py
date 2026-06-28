@@ -45,6 +45,7 @@ from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, Command
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 def generate_launch_description():
     pkg_warehouse = get_package_share_directory('warehouse_gazebo')
@@ -82,7 +83,13 @@ def generate_launch_description():
         package='robot_state_publisher',
         executable='robot_state_publisher',
         # parameters=[{'robot_description': Command(['xacro ', xacro_file])}]
-        parameters=[{'robot_description': Command(['xacro ', urdf_file, ' gazebo:=ignition'])}]
+         parameters=[{'robot_description': Command(['xacro ', xacro_file, ' gazebo:=ignition'])}]
+        # parameters=[{
+        #     'robot_description': ParameterValue(
+        #         Command(['xacro ', xacro_file, ' gazebo:=ignition']),
+        #         value_type=str
+        #     )
+        # }]
     )
 
     # 4. SPAWN DEL ROBOT NEL MAGAZZINO
