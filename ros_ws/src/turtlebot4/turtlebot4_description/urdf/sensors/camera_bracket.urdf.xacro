@@ -15,13 +15,8 @@
     <child link="${link_name}"/>
     <xacro:insert_block name="origin"/>
     <axis xyz="0 0 1"/>
-    
-    <!-- attrito e smorzamento -->
-    <dynamics damping="0.001" friction="0.001"/>
-    
-    <!-- limiti di velocità e movimento obbligatori -->
-    <limit lower="-1.57" upper="1.57" effort="10.0" velocity="1.0"/>
-
+    <dynamics damping="0.1" friction="0.1"/>
+    <limit effort="10.0" velocity="1.0"/>
   </joint>
 
   <link name="${link_name}">
