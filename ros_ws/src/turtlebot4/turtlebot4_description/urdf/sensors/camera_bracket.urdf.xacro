@@ -10,7 +10,7 @@
   <xacro:property name="link_name" value="${name}"/>
   <xacro:property name="joint_name" value="${name}_joint"/>
 
-  <joint name="${joint_name}" type="continuous">
+  <joint name="${joint_name}" type="fixed">
     <parent link="${parent_link}"/>
     <child link="${link_name}"/>
     <xacro:insert_block name="origin"/>
