@@ -9,7 +9,6 @@ RUN apt update -y && apt install -y wget git nano curl python3-dev build-essenti
 RUN apt update -y && apt install -y ros-jazzy-rqt-graph ros-jazzy-rqt-tf-tree ros-jazzy-rviz2
 
 # 3. AMBIENTE E ROBOT: Gazebo Harmonic e URDF/Xacro
-##### RUN apt update -y && apt install -y ros-jazzy-ros-gz ros-jazzy-xacro
 RUN apt-get update -y && apt-get install -y ros-jazzy-ros-gz ros-jazzy-xacro ros-jazzy-turtlebot4-description ros-jazzy-irobot-create-* && rm -rf /var/lib/apt/lists/*
 
 # 4. NAVIGAZIONE: Nav2 Stack
@@ -24,12 +23,6 @@ RUN apt update -y && apt install -y ros-jazzy-vision-opencv
 # 7. INSTALLAZIONE 'uv' (Sostituto ottimizzato di pip --- visto dal c3lab del prof. Brescia ---)
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
-
-# 8. YOLOv8 tramite Virtual Environment gestito da uv
-# Creiamo l'ambiente virtuale, lo attiviamo e installiamo la rete neurale in modo sicuro
-# RUN uv venv /opt/venv
-# ENV PATH="/opt/venv/bin:$PATH"
-# RUN uv pip install ultralytics
 
 # 8. YOLOv8 tramite Virtual Environment gestito da uv
 # Creiamo l'ambiente virtuale con ACCESSO ALLE LIBRERIE DI SISTEMA (ROS 2)
