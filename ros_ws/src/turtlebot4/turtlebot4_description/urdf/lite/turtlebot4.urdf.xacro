@@ -42,4 +42,29 @@
     <parent link="base_link" />
     <child link="base_footprint" />
   </joint>
+
+<!-- il plugin per il giunto della staffa -->
+<gazebo>
+    <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
+      <joint_name>oakd_camera_bracket_joint</joint_name>
+      <topic>bracket_vel</topic>
+    </plugin>
+  </gazebo>
+
+<!-- il plugin per muovere le ruote -->
+<gazebo>
+    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>0.233</wheel_separation>
+      <wheel_radius>0.03575</wheel_radius>
+      <odom_publish_frequency>30</odom_publish_frequency>
+      <topic>cmd_vel</topic>
+      <odom_topic>odom</odom_topic>
+      <tf_topic>tf</tf_topic>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_footprint</child_frame_id>
+    </plugin>
+  </gazebo>
+
 </robot>
