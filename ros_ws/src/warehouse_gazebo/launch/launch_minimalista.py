@@ -58,10 +58,44 @@ def generate_launch_description():
         output='screen'
     )
 
-    # 5. RESTITUZIONE DI TUTTE LE ISTRUZIONI A ROS 2
+    # 5. BRIDGE
+    # Ponte ROS <-> Gazebo per Motori e Sensori (crea il collegamento tra motori e LiDAR, telecamera ed IMU)
+    gazebo_bridges = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        arguments=[
+            # --- MOTORI (Bidirezionale) ---
+            '/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist',
+            '/bracket_vel@std_msgs/msg/Float64@gz.msgs.Double',
+            
+            # --- SENSORI (Da Gazebo a ROS2) ---
+            # 1. Telecamera (Immagini standard)
+            '/world/world_demo/model/turtlebot4/link/oakd_rgb_camera_frame/sensor/rgbd_camera/image@sensor_msgs/msg/Image[gz.msgs.Image',
+            
+            # 2. Telecamera di Profondità 
+            '/world/world_demo/model/turtlebot4/link/oakd_rgb_camera_frame/sensor/rgbd_camera/depth_image@sensor_msgs/msg/Image[gz.msgs.Image',
+            
+            # 3. IMU (Accelerometro/Giroscopio)
+            '/world/world_demo/model/turtlebot4/link/imu_link/sensor/imu/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
+
+            # 4. Lidar (Scansione Laser 2D)
+            '/world/world_demo/model/turtlebot4/link/rplidar_link/sensor/rplidar/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan'
+        ],
+        # Configurazione di nuovi nomi (più corti)
+        remappings=[
+            ('/world/world_demo/model/turtlebot4/link/oakd_rgb_camera_frame/sensor/rgbd_camera/image', '/camera/image_raw'),
+            ('/world/world_demo/model/turtlebot4/link/oakd_rgb_camera_frame/sensor/rgbd_camera/depth_image', '/camera/depth/image_raw'),
+            ('/world/world_demo/model/turtlebot4/link/imu_link/sensor/imu/imu', '/imu'),
+            ('/world/world_demo/model/turtlebot4/link/rplidar_link/sensor/rplidar/scan', '/scan'),
+        ],
+        output='screen'
+    )
+
+    # 6. RESTITUZIONE DI TUTTE LE ISTRUZIONI A ROS 2
     return LaunchDescription([
         world_arg,
         gazebo_launch,
         robot_state_publisher, # Aggiunto il nodo del modello
-        spawn_entity           # Aggiunto il nodo di spawn
+        spawn_entity,           # Aggiunto il nodo di spawn
+        gazebo_bridges         # Aggiunto il ponte
     ])

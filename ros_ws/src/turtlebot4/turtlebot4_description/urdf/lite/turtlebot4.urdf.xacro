@@ -20,7 +20,6 @@
   <xacro:property name="oakd_lite_z_offset"             value="${9.25385*cm2m}"/>
 
   <!-- Turtlebot4 sensor definitions -->
-
   <xacro:rplidar name="rplidar" parent_link="base_link" gazebo="$(arg gazebo)">
     <origin xyz="${rplidar_x_offset} ${rplidar_y_offset} ${rplidar_z_offset + base_link_z_offset}"
             rpy="0 0 ${pi/2}"/>
