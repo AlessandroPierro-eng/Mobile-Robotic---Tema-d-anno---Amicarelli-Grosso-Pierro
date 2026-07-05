@@ -1,5 +1,5 @@
 # 🤖 Security Fleet - Mobile Robotics Project
-Benvenuti nel repository del progetto di Robotica Mobile (Tema d'anno). 
+Benvenuti nel repository del progetto di Robotica Mobile. 
 Il progetto mira a sviluppare un sistema di sicurezza intercettivo basato su una flotta di 3 TurtleBot 4 all'interno di un magazzino simulato.
 
 ## 👥 Team

@@ -59,7 +59,7 @@ def generate_launch_description():
     )
 
     # 5. BRIDGE
-    # Ponte ROS <-> Gazebo per Motori e Sensori (crea il collegamento tra motori e LiDAR, telecamera ed IMU)
+    # Ponte ROS <-> Gazebo per Motori e Sensori (crea il collegamento tra motori con LiDAR, telecamera ed IMU)
     gazebo_bridges = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
@@ -79,7 +79,13 @@ def generate_launch_description():
             '/world/world_demo/model/turtlebot4/link/imu_link/sensor/imu/imu@sensor_msgs/msg/Imu[gz.msgs.IMU',
 
             # 4. Lidar (Scansione Laser 2D)
-            '/world/world_demo/model/turtlebot4/link/rplidar_link/sensor/rplidar/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan'
+            '/world/world_demo/model/turtlebot4/link/rplidar_link/sensor/rplidar/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+
+            # 5. Odometria (Movimento stimato dalle ruote pubblicato direttamente sulla root)
+            '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+            
+            # 6. Transformazioni (TF - Posizione dinamica del robot nel mondo)
+            '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V'
         ],
         # Configurazione di nuovi nomi (più corti)
         remappings=[

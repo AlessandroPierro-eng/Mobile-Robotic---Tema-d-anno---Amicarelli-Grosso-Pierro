@@ -11,6 +11,9 @@ RUN apt update -y && apt install -y ros-jazzy-rqt-graph ros-jazzy-rqt-tf-tree ro
 # 3. AMBIENTE E ROBOT: Gazebo Harmonic e URDF/Xacro
 RUN apt-get update -y && apt-get install -y ros-jazzy-ros-gz ros-jazzy-xacro ros-jazzy-turtlebot4-description ros-jazzy-irobot-create-* && rm -rf /var/lib/apt/lists/*
 
+# 3.5. MAPPATURA: SLAM Toolbox
+RUN apt update -y && apt install -y ros-jazzy-slam-toolbox ros-jazzy-teleop-twist-keyboard
+
 # 4. NAVIGAZIONE: Nav2 Stack
 RUN apt update -y && apt install -y ros-jazzy-navigation2 ros-jazzy-nav2-bringup
 
