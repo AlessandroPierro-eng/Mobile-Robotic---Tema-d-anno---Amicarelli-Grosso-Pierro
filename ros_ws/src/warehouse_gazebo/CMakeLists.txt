@@ -7,9 +7,9 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 
-# Installazione dei file necessari
+# Installazione dei file necessari (inclusa la mappa per la Fase 2)
 install(
-  DIRECTORY launch worlds
+  DIRECTORY launch worlds map
   DESTINATION share/${PROJECT_NAME}
 )
 

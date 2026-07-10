@@ -1,15 +1,21 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>warehouse_gazebo</name>
+  <name>warehouse_robot</name>
   <version>0.0.0</version>
-  <description>Ambiente di simulazione del magazzino in Gazebo Harmonic per il progetto Mobile Robotics</description>
+  <description>Logica di configurazione, sensori e navigazione (Nav2) del TurtleBot4</description>
   <maintainer email="studente@todo.com">Team 26_05</maintainer>
   <license>Apache License 2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <exec_depend>ros_gz_sim</exec_depend>
+  <depend>nav2_bringup</depend>
+  <depend>rviz2</depend>
+  <depend>turtlebot4_description</depend>
+  <depend>tf2_ros</depend>
+  <depend>ros_gz_sim</depend>
+  <depend>ros_gz_bridge</depend>
+  <depend>robot_state_publisher</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
