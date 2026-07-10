@@ -34,7 +34,7 @@
     <xacro:inertial_cuboid mass="0.17" x="${length_x}" y="${length_y}" z="${length_z}"/>
   </link>
 
-<!-- QUESTA E' IL BLOCCO CHE HO SOSTITUITO PER RISOLVERE IL PROBLEMA DEL LIDAR -->
+<!-- QUESTO E' IL BLOCCO CHE HO SOSTITUITO PER RISOLVERE IL PROBLEMA DEL LIDAR -->
 <gazebo reference="${name}_link">
     <sensor type="gpu_lidar" name="${name}">
       <always_on>true</always_on>
