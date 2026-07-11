@@ -19,6 +19,13 @@ def generate_launch_description():
         }]
     )
 
+    joint_state_publisher = Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        name='joint_state_publisher',
+        parameters=[{'use_sim_time': True}]
+    )
+
     # Gazebo entity spawning
     spawn_entity = Node(
         package='ros_gz_sim',
@@ -69,6 +76,7 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     ld.add_action(robot_state_publisher)
+    ld.add_action(joint_state_publisher)
     ld.add_action(spawn_entity)
     ld.add_action(gazebo_bridges)
     ld.add_action(lidar_static_tf)
