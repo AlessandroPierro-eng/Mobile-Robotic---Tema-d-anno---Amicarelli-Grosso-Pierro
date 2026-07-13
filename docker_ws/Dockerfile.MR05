@@ -1,8 +1,8 @@
 FROM ros:jazzy
 
 # 1. Aggiornamento sistema, strumenti base e compilatori per Python
-# Nota: aggiunto 'curl' che è necessario per scaricare 'uv'
-RUN apt update -y && apt install -y wget git nano curl python3-dev build-essential libgl1 libglib2.0-0
+# Nota: aggiunto 'python3-numpy' per risolvere l'errore di build di rosidl_generator_py
+RUN apt update -y && apt install -y wget git nano curl python3-dev build-essential libgl1 libglib2.0-0 python3-numpy
 
 # 2. Strumenti grafici di debug per ROS 2
 # Nota: aggiunto rviz2 per la visualizzazione delle costmap e dei robot
@@ -30,5 +30,5 @@ ENV PATH="/root/.local/bin:$PATH"
 # 8. YOLOv8 tramite Virtual Environment gestito da uv
 # Creiamo l'ambiente virtuale con ACCESSO ALLE LIBRERIE DI SISTEMA (ROS 2)
 RUN uv venv --system-site-packages /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-RUN uv pip install ultralytics
+# Attiviamo l'ambiente SOLO per questa istruzione e installiamo YOLO e NumPy
+RUN . /opt/venv/bin/activate && uv pip install "numpy<2.0.0" ultralytics
