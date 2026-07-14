@@ -34,16 +34,18 @@ install(
 )
 
 # ==============================================================================
-# NUOVA SEZIONE AGGIUNTA: INSTALLAZIONE DEGLI SCRIPT PYTHON
-# Questo comando indica a CMake di prendere lo script 'yolo_detector.py', 
-# di riconoscerlo come un programma eseguibile e di installarlo nella cartella 
-# di sistema 'lib/warehouse_robot'. 
-# In questo modo, il comando 'ros2 run' saprà esattamente dove andarlo a pescare.
-# Quando aggiungerai altri nodi, basterà aggiungerli a questa lista.
+# INSTALLAZIONE DEGLI SCRIPT PYTHON
 # ==============================================================================
 install(PROGRAMS
   warehouse_robot/yolo_detector.py
   DESTINATION lib/${PROJECT_NAME}
+  RENAME yolo_detector
+)
+
+install(PROGRAMS
+  warehouse_robot/camera_tracker.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME camera_tracker
 )
 
 ament_package()
