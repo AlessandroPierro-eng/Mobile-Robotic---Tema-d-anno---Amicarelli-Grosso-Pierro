@@ -393,7 +393,10 @@
         </collision>
       </link>
     </model>
+<<<<<<< HEAD
 
+=======
+>>>>>>> 507ab4288e15666ac3ccc00442e4e96a079ca75e
     <actor name="actor_walking">
       <skin>
         <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
@@ -404,6 +407,5 @@
         <interpolate_x>true</interpolate_x>
       </animation>
     </actor> 
-
   </world>
 </sdf>
