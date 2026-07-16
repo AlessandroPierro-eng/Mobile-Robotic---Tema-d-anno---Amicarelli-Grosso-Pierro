@@ -34,7 +34,7 @@ class RobotManager(Node):
         
         # Variabili per la Ronda (Waypoints)
         # Esempio di 2 punti mappa [X, Y]. Li modificheremo con i tuoi veri waypoint.
-        self.waypoints = [[2.0, 0.0], [5.0, 3.0]] 
+        self.waypoints = [[7.7, 4.0], [-19.5, 6.1], [-20.5, -6.5], [6.8, -8.3]]
         self.current_wp_index = 0
         
         # ==========================================
@@ -164,6 +164,7 @@ class RobotManager(Node):
                 self.current_wp_index = (self.current_wp_index + 1) % len(self.waypoints)
                 
         elif self.state == 'CHASE':
+            self.is_navigating = True
             # Se stiamo inseguendo, andiamo verso il ladro
             if self.last_intruder_pose:
                 target_x = self.last_intruder_pose[0]
@@ -173,15 +174,15 @@ class RobotManager(Node):
                 # Se non abbiamo un goal attivo o se il ladro si è mosso di oltre 0.5 metri, aggiorniamo la rotta
                 import math
                 if not hasattr(self, 'current_chase_target'):
-                    self.current_chase_target = [0.0, 0.0]
+                    self.current_chase_target = [0, 0]
                     
                 distanza_spostamento = math.hypot(target_x - self.current_chase_target[0], 
                                                   target_y - self.current_chase_target[1])
                                                   
                 if not self.is_navigating or distanza_spostamento > 0.5:
                     self.current_chase_target = [target_x, target_y]
-                #   self.send_nav_goal(target_x, target_y)
-                    self.send_nav_goal(0, 0)
+                    # self.send_nav_goal(target_x, target_y)
+                    self.send_nav_goal(-20.5, -6.5)
             
         elif self.state == 'SEARCH':
             # Rimuovi (o commenta) queste righe!
@@ -198,11 +199,11 @@ class RobotManager(Node):
     def send_nav_goal(self, x, y):
         """Invia un obiettivo a Nav2."""
         # Aspetta che il server Nav2 sia pronto
-        if not self.nav_client.wait_for_server(timeout_sec=2.0):
+        if not self.nav_client.wait_for_server(timeout_sec=5.0):
             self.get_logger().error("Nav2 Action Server non disponibile!")
             return
 
-        # Crea il messaggio PoseStamped
+        # Crea il messaggio PoseStamped (posizione del ladro in cordinate assolute)
         goal_msg = NavigateToPose.Goal()
         goal_msg.pose.header.frame_id = 'map'
         goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
