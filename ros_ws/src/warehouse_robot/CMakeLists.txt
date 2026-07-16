@@ -15,6 +15,12 @@ find_package(ros_gz_sim REQUIRED)
 find_package(ros_gz_bridge REQUIRED)
 find_package(robot_state_publisher REQUIRED)
 
+# Nuove dipendenze per il Local Manager
+find_package(rclpy REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(nav2_msgs REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
@@ -31,6 +37,28 @@ endif()
 install(
   DIRECTORY launch config
   DESTINATION share/${PROJECT_NAME}
+)
+
+# ==============================================================================
+# INSTALLAZIONE DEGLI SCRIPT PYTHON
+# ==============================================================================
+install(PROGRAMS
+  warehouse_robot/yolo_detector.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME yolo_detector
+)
+
+install(PROGRAMS
+  warehouse_robot/camera_tracker.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME camera_tracker
+)
+
+# Nuovo nodo: Local Manager
+install(PROGRAMS
+  warehouse_robot/robot_manager.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME robot_manager
 )
 
 ament_package()
