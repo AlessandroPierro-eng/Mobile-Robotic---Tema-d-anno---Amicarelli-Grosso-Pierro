@@ -42,16 +42,24 @@
     <child link="base_footprint" />
   </joint>
 
-<!-- il plugin per il giunto della staffa -->
-<gazebo>
+  <!-- il plugin per CONTROLLARE il giunto della staffa (Input) -->
+  <gazebo>
     <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
       <joint_name>oakd_camera_bracket_joint</joint_name>
       <topic>bracket_vel</topic>
     </plugin>
   </gazebo>
 
-<!-- il plugin per muovere le ruote -->
-<gazebo>
+  <!-- NUOVO PLUGIN: per LEGGERE lo stato del giunto della staffa (Feedback) -->
+  <gazebo>
+    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+      <topic>bracket_joint_state</topic>
+      <joint_name>oakd_camera_bracket_joint</joint_name>
+    </plugin>
+  </gazebo>
+
+  <!-- il plugin per muovere le ruote -->
+  <gazebo>
     <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
       <left_joint>left_wheel_joint</left_joint>
       <right_joint>right_wheel_joint</right_joint>
@@ -66,5 +74,4 @@
       <child_frame_id>base_link</child_frame_id>
     </plugin>
   </gazebo>
-
 </robot>

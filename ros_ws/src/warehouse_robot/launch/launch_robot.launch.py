@@ -3,6 +3,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.substitutions import Command
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue # <--- NUOVO IMPORT AGGIUNTO
 
 def generate_launch_description():
     pkg_turtlebot = get_package_share_directory('turtlebot4_description')
@@ -14,7 +15,8 @@ def generate_launch_description():
         package='robot_state_publisher',
         executable='robot_state_publisher',
         parameters=[{
-            'robot_description': Command(['xacro ', xacro_file]),
+            # ---> RIGA MODIFICATA QUI SOTTO <---
+            'robot_description': ParameterValue(Command(['xacro ', xacro_file]), value_type=str),
             'use_sim_time': True
         }]
     )
@@ -23,7 +25,10 @@ def generate_launch_description():
         package='joint_state_publisher',
         executable='joint_state_publisher',
         name='joint_state_publisher',
-        parameters=[{'use_sim_time': True}]
+        parameters=[{
+           'use_sim_time': True,
+          'source_list': ['/bracket_joint_state'] # <--- Sostituisci exclude_joints con questo
+        }]
     )
 
     # Gazebo entity spawning
@@ -53,6 +58,7 @@ def generate_launch_description():
             '/world/world_demo/model/turtlebot4/link/rplidar_link/sensor/rplidar/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
             '/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
             '/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
+            '/bracket_joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
             '/world/world_demo/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'
         ],
         remappings=[

@@ -142,13 +142,24 @@ class RobotManager(Node):
             self.state = 'CHASE'
             
         elif self.state == 'CHASE' and not self.intruder_seen_recently:
-            # Abbiamo appena perso il bersaglio
+            # Calcoliamo da quanto tempo non vediamo il ladro
             time_since_lost = current_time - self.last_intruder_time
-            if time_since_lost < 10.0:
+            
+            # --- NUOVA LOGICA ANTI-SFARFALLIO ---
+            if time_since_lost <= 2.0:
+                # Da meno di un secondo: è probabile sia solo uno sfarfallio di YOLO.
+                # 'pass' significa "non fare nulla", così il robot resta nello stato CHASE
+                # e continua a muoversi verso self.last_intruder_pose.
+                pass
+                
+            elif 1.0 < time_since_lost < 10.0:
+                # Da più di un secondo ma meno di 10: lo abbiamo perso davvero.
                 if self.state != 'SEARCH':
-                    self.get_logger().info("Bersaglio perso. Inizio procedura SEARCH...")
+                    self.get_logger().info("Bersaglio perso da oltre 2s. Inizio procedura SEARCH...")
                 self.state = 'SEARCH'
+                
             else:
+                # Da oltre 10 secondi: ci arrendiamo.
                 self.get_logger().info("Bersaglio sparito da troppo tempo. Torno in PATROL.")
                 self.state = 'PATROL'
 
@@ -181,8 +192,7 @@ class RobotManager(Node):
                                                   
                 if not self.is_navigating or distanza_spostamento > 0.5:
                     self.current_chase_target = [target_x, target_y]
-                    # self.send_nav_goal(target_x, target_y)
-                    self.send_nav_goal(-20.5, -6.5)
+                    self.send_nav_goal(target_x, target_y)
             
         elif self.state == 'SEARCH':
             # Rimuovi (o commenta) queste righe!
@@ -245,7 +255,6 @@ class RobotManager(Node):
     def get_result_callback(self, future):
         status = future.result().status
         self.is_navigating = False
-        self.get_logger().info(f"Navigazione completata con stato: {status}")
 
      # -- Callback per il global manager (DA DEFINIRE DOPO) --
 
