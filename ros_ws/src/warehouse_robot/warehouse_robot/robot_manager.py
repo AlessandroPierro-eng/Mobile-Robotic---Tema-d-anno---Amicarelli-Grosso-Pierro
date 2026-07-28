@@ -4,16 +4,18 @@ import rclpy
 from rclpy.node import Node
 from rclpy.action import ActionClient
 import time
+import math
 
 # Messaggi per Nav2 e ROS
 from nav2_msgs.action import NavigateToPose
-from geometry_msgs.msg import PointStamped, PoseStamped
+from action_msgs.msg import GoalStatus
+from geometry_msgs.msg import PointStamped, PoseStamped, Twist
+from std_msgs.msg import String
 
 # Librerie per le Trasformate (TF2)
 import tf2_ros
 from tf2_ros import TransformException
-
-import tf2_geometry_msgs  # Indispensabile per applicare la trasformata ai punti
+import tf2_geometry_msgs  
 
 
 class RobotManager(Node):
@@ -23,197 +25,211 @@ class RobotManager(Node):
         self.get_logger().info("Inizializzazione Robot Manager in corso...")
 
         # ==========================================
+        # 0. PARAMETRI ROS 2
+        # ==========================================
+        self.declare_parameter('start_wp_index', 0)
+        self.current_wp_index = self.get_parameter('start_wp_index').get_parameter_value().integer_value
+
+        # ==========================================
         # 1. MEMORIA DELLA MACCHINA A STATI (FSM)
         # ==========================================
-        self.state = 'PATROL'  # Stati: PATROL, CHASE, SEARCH, INTERCEPT
+        self.state = 'patrol'  # Stati: patrol, pursuit, tactical, search
         
-        # Variabili di stato per l'Intruso
-        self.intruder_seen_recently = False
-        self.last_intruder_time = 0.0
-        self.last_intruder_pose = None  # Salveremo qui le coordinate globali (X, Y)
+        self.yolo_sees_intruder = False
+        self.received_tactical_order = False
+        self.received_search_cmd = False
+        self.received_patrol_cmd = False  # <--- NUOVA FLAG PER IL GM
         
-        # Variabili per la Ronda (Waypoints)
-        # Esempio di 2 punti mappa [X, Y]. Li modificheremo con i tuoi veri waypoint.
+        self.last_intruder_pose = None
+        self.tactical_target = None
+        
+        # Waypoints della ronda
         self.waypoints = [[7.7, 4.0], [-19.5, 6.1], [-20.5, -6.5], [6.8, -8.3]]
-        self.current_wp_index = 0
-        
+        self.current_wp_index = self.current_wp_index % len(self.waypoints)
+
         # ==========================================
-        # 2. SISTEMA DI TRASFORMATE (TF2)
+        # 2. SISTEMA DI TRASFORMATE E NAVIGAZIONE
         # ==========================================
         self.tf_buffer = tf2_ros.Buffer()
         self.tf_listener = tf2_ros.TransformListener(self.tf_buffer, self)
 
-        # ==========================================
-        # 3. INTERFACCE DI COMUNICAZIONE (Muscoli e Sensi)
-        # ==========================================
-
-        # Action Client per comandare Nav2
         self.nav_client = ActionClient(self, NavigateToPose, 'navigate_to_pose')
-        self.nav_goal_handle = None     # Memorizza il viaggio attuale per poterlo cancellare
-        self.is_navigating = False      # Bandierina per sapere se il robot si sta muovendo
-        
-        # Sottoscrizione a YOLO (Il nostro Occhio)
+        self.nav_goal_handle = None    
+        self.is_navigating = False      
+
+        # ==========================================
+        # 3. INTERFACCE DI COMUNICAZIONE
+        # ==========================================
         self.yolo_sub = self.create_subscription(
-            PointStamped,
-            '/intruder_tracking',
-            self.yolo_callback,
-            10)
+            PointStamped, 'intruder_tracking', self.yolo_callback, 10)
             
-        # Sottoscrizione agli Ordini Globali (Lo Sciame) - Per il futuro
-        self.global_order_sub = self.create_subscription(
-            PointStamped,
-            '/global_orders',
-            self.global_order_callback,
-            10)
+        self.tactical_order_sub = self.create_subscription(
+            PointStamped, 'tactical_order', self.tactical_order_callback, 10)
+            
+        self.state_sub = self.create_subscription(
+            String, 'state', self.state_callback, 10)
 
-        # Editore per l'Allarme Globale
-        self.alarm_pub = self.create_publisher(PointStamped, '/global_intruder_alert', 10)    
+        self.intruder_pos_pub = self.create_publisher(
+            PointStamped, 'global_intruder_position', 10)    
+
+        self.state_pub = self.create_publisher(String, 'state', 10)
+        self.cmd_vel_pub = self.create_publisher(Twist, 'cmd_vel', 10)
 
         # ==========================================
-        # 4. IL BATTITO CARDIACO (Timer del Control Loop)
+        # 4. IL BATTITO CARDIACO 
         # ==========================================
-        timer_period = 0.2  # 5 Hz (esegue il loop 5 volte al secondo)
+        timer_period = 0.2  # 5 Hz
         self.timer = self.create_timer(timer_period, self.control_loop)
         
-        self.get_logger().info("Robot Manager PRONTO. Stato iniziale: PATROL")
+        self.get_logger().info(f"Robot Manager PRONTO. Stato: {self.state.upper()} | Start WP: {self.current_wp_index}")
 
     # -------------------------------------------------------------------------
-    # CALLBACKS (I SENSI - Aggiornano solo le bandierine, NON prendono decisioni)
+    # CALLBACKS SENSORIALI
     # -------------------------------------------------------------------------
     def yolo_callback(self, msg):
-        """Riceve i dati da YOLO e aggiorna la memoria a breve termine."""
         if msg.point.z > 0.0:
-            # L'intruso è visibile!
-            self.intruder_seen_recently = True
-            self.last_intruder_time = time.time()
-            
-            # 1. TRASFORMAZIONE IN COORDINATE MAPPA
+            self.yolo_sees_intruder = True
             global_coords = self.get_global_pose(msg)
+            
             if global_coords:
                 self.last_intruder_pose = global_coords
                 
-                # 2. ALLARME GLOBALE
-                # Creiamo il messaggio da urlare allo sciame
-                alarm_msg = PointStamped()
-                alarm_msg.header.stamp = self.get_clock().now().to_msg()
-                # Usiamo il frame_id per "firmare" il messaggio (utile per il Global Manager)
-                alarm_msg.header.frame_id = self.get_name() 
-                alarm_msg.point.x = global_coords[0]
-                alarm_msg.point.y = global_coords[1]
-                alarm_msg.point.z = 0.0
+                pos_msg = PointStamped()
+                pos_msg.header.stamp = self.get_clock().now().to_msg()
+                pos_msg.header.frame_id = 'map' # È CRUCIALE CHE SIA 'map' E NON IL NOME DEL ROBOT!
+                pos_msg.point.x = global_coords[0]
+                pos_msg.point.y = global_coords[1]
+                pos_msg.point.z = 0.0
                 
-                self.alarm_pub.publish(alarm_msg)
+                # LA STAMPA FONDAMENTALE MANCANTE:
+                self.get_logger().warn(f"!!! [YOLO] AVVISTAMENTO! Invio allarme al Global Manager: X={global_coords[0]:.2f}, Y={global_coords[1]:.2f} !!!")
+                
+                self.intruder_pos_pub.publish(pos_msg)
+            else:
+                self.get_logger().error("[TF2] Errore critico: Yolo vede il bersaglio ma non riesco a tradurre le coordinate sulla mappa!")
         else:
-            # YOLO ha perso l'intruso (Z = -1.0)
-            self.intruder_seen_recently = False
+            self.yolo_sees_intruder = False
+
+    def tactical_order_callback(self, msg):
+        self.tactical_target = [msg.point.x, msg.point.y]
+        self.received_tactical_order = True
+        self.get_logger().warn(f"[TATTICA] Ricevuto ordine dal Global Manager -> X={msg.point.x:.2f}, Y={msg.point.y:.2f}")
+
+
+    def state_callback(self, msg):
+        cmd = msg.data.lower()
+        if cmd == 'search' and self.state != 'search':
+            self.received_search_cmd = True
+        elif cmd == 'patrol' and self.state != 'patrol':
+            self.received_patrol_cmd = True
 
     def get_global_pose(self, local_point_msg):
-        """Trasforma un punto dal sistema della telecamera a quello della mappa globale."""
         try:
-            # Chiediamo a TF2 la relazione spaziale tra la 'map' e la telecamera in questo esatto istante
+            # Attendiamo che la trasformata sia disponibile. Aumentato il timeout a 0.2s per Docker
             transform = self.tf_buffer.lookup_transform(
-                'map',
-                local_point_msg.header.frame_id,
-                rclpy.time.Time(), # Prendi la trasformata più recente
-                timeout=rclpy.duration.Duration(seconds=0.1)
+                'map', local_point_msg.header.frame_id,
+                rclpy.time.Time(), timeout=rclpy.duration.Duration(seconds=0.2)
             )
-            
-            # Applichiamo la trasformazione al punto
             global_point_msg = tf2_geometry_msgs.do_transform_point(local_point_msg, transform)
-            
-            # Estraiamo solo X e Y (il robot si muove sul piano 2D)
             return [global_point_msg.point.x, global_point_msg.point.y]
-            
-        except TransformException as ex:
-            self.get_logger().error(f"Errore TF2: Impossibile localizzare l'intruso sulla mappa. Dettagli: {ex}")
+        except TransformException as e:
+            self.get_logger().error(f"[TF2 EXCEPTION] Impossibile trasformare {local_point_msg.header.frame_id} in 'map': {e}")
             return None
 
     # -------------------------------------------------------------------------
-    # IL CERVELLO (Valuta le transizioni e gestisce le azioni)
+    # IL CERVELLO (Control Loop)
     # -------------------------------------------------------------------------
     def control_loop(self):
-        """Viene eseguito 5 volte al secondo. Gestisce la FSM."""
         current_time = time.time()
+        next_state = self.state
         
-        # --- A. VALUTAZIONE DELLE TRANSIZIONI (Chi vince?) ---
-        if self.intruder_seen_recently:
-            if self.state != 'CHASE':
-                self.get_logger().warn("INTRUSO AVVISTATO! Transizione a CHASE.")
-            self.state = 'CHASE'
-            
-        elif self.state == 'CHASE' and not self.intruder_seen_recently:
-            # Calcoliamo da quanto tempo non vediamo il ladro
-            time_since_lost = current_time - self.last_intruder_time
-            
-            # --- NUOVA LOGICA ANTI-SFARFALLIO ---
-            if time_since_lost <= 2.0:
-                # Da meno di un secondo: è probabile sia solo uno sfarfallio di YOLO.
-                # 'pass' significa "non fare nulla", così il robot resta nello stato CHASE
-                # e continua a muoversi verso self.last_intruder_pose.
-                pass
+        # --- A. VALUTAZIONE DELLE TRANSIZIONI (FSM) ---
+        if self.state == 'patrol':
+            if self.received_tactical_order:
+                next_state = 'tactical'
+            elif self.yolo_sees_intruder:
+                next_state = 'pursuit'
                 
-            elif 1.0 < time_since_lost < 10.0:
-                # Da più di un secondo ma meno di 10: lo abbiamo perso davvero.
-                if self.state != 'SEARCH':
-                    self.get_logger().info("Bersaglio perso da oltre 2s. Inizio procedura SEARCH...")
-                self.state = 'SEARCH'
+        elif self.state == 'pursuit':
+            if self.received_tactical_order:
+                next_state = 'tactical'
+            elif self.received_search_cmd:
+                next_state = 'search'
                 
-            else:
-                # Da oltre 10 secondi: ci arrendiamo.
-                self.get_logger().info("Bersaglio sparito da troppo tempo. Torno in PATROL.")
-                self.state = 'PATROL'
+        elif self.state == 'tactical':
+            if self.received_search_cmd:
+                next_state = 'search'
+                
+        elif self.state == 'search':
+            if self.received_tactical_order:
+                next_state = 'tactical'
+            elif self.yolo_sees_intruder:
+                next_state = 'pursuit'
+            elif self.received_patrol_cmd:
+                self.get_logger().info("Ordine di fine ricerca dal GM. Torno in pattuglia.")
+                next_state = 'patrol'
+
+        # Reset incondizionato delle flag
+        self.received_tactical_order = False
+        self.received_search_cmd = False
+        self.received_patrol_cmd = False
+
+        # Applicazione nuovo stato e Freno a Mano
+        if next_state != self.state:
+            self.get_logger().warn(f"TRANSIZIONE: {self.state.upper()} -> {next_state.upper()}")
+            self.cancel_nav_goal()
+            self.state = next_state
+            
+        state_msg = String()
+        state_msg.data = self.state
+        self.state_pub.publish(state_msg)
 
         # --- B. ESECUZIONE DELLO STATO ATTUALE ---
-        if self.state == 'PATROL':
-            # Se il robot è fermo, mandiamolo al prossimo waypoint
+        if self.state == 'patrol':
             if not self.is_navigating:
                 wp = self.waypoints[self.current_wp_index]
-                self.get_logger().info(f"Ronda: Dirigo al WP {self.current_wp_index} -> {wp}")
-                self.send_nav_goal(wp[0], wp[1])
+                # Inviamo la meta. NON INCREMENTIAMO L'INDICE QUI!
+                success = self.send_nav_goal(wp[0], wp[1])
+                if success:
+                    self.get_logger().info(f"Ronda: Invio ordine al WP {self.current_wp_index} -> {wp}")
                 
-                # Passa al prossimo waypoint (ciclico)
-                self.current_wp_index = (self.current_wp_index + 1) % len(self.waypoints)
-                
-        elif self.state == 'CHASE':
-            self.is_navigating = True
-            # Se stiamo inseguendo, andiamo verso il ladro
+        elif self.state == 'pursuit':
             if self.last_intruder_pose:
-                target_x = self.last_intruder_pose[0]
-                target_y = self.last_intruder_pose[1]
-                
-                # Calcoliamo a spanne la distanza tra dove stiamo andando ora e dove è il ladro
-                # Se non abbiamo un goal attivo o se il ladro si è mosso di oltre 0.5 metri, aggiorniamo la rotta
-                import math
+                tx, ty = self.last_intruder_pose
                 if not hasattr(self, 'current_chase_target'):
-                    self.current_chase_target = [0, 0]
+                    self.current_chase_target = [0.0, 0.0]
+                
+                dist = math.hypot(tx - self.current_chase_target[0], ty - self.current_chase_target[1])
+                
+                if not self.is_navigating or dist > 0.5:
+                    self.current_chase_target = [tx, ty]
+                    self.send_nav_goal(tx, ty)
                     
-                distanza_spostamento = math.hypot(target_x - self.current_chase_target[0], 
-                                                  target_y - self.current_chase_target[1])
-                                                  
-                if not self.is_navigating or distanza_spostamento > 0.5:
-                    self.current_chase_target = [target_x, target_y]
-                    self.send_nav_goal(target_x, target_y)
-            
-        elif self.state == 'SEARCH':
-            # Rimuovi (o commenta) queste righe!
-            # if self.is_navigating:
-            #     self.get_logger().info("Cancellazione del goal Nav2 corrente...")
-            #     self.cancel_nav_goal()
-            
-            # Al loro posto, metti semplicemente 'pass', così Nav2 continua a guidare
-            pass
+        elif self.state == 'tactical':
+            if self.tactical_target:
+                tx, ty = self.tactical_target
+                if not hasattr(self, 'current_tactical_target'):
+                    self.current_tactical_target = [0.0, 0.0]
+                
+                dist = math.hypot(tx - self.current_tactical_target[0], ty - self.current_tactical_target[1])
+                
+                if not self.is_navigating or dist > 0.5:
+                    self.current_tactical_target = [tx, ty]
+                    self.send_nav_goal(tx, ty)
+                    
+        elif self.state == 'search':
+            if not self.is_navigating:
+                spin_msg = Twist()
+                spin_msg.angular.z = 0.5 
+                self.cmd_vel_pub.publish(spin_msg)
 
-# -------------------------------------------------------------------------
-    # I MUSCOLI (Controllo di Nav2)
+    # -------------------------------------------------------------------------
+    # I MUSCOLI (Gestione asincrona Nav2)
     # -------------------------------------------------------------------------
     def send_nav_goal(self, x, y):
-        """Invia un obiettivo a Nav2."""
-        # Aspetta che il server Nav2 sia pronto
-        if not self.nav_client.wait_for_server(timeout_sec=5.0):
-            self.get_logger().error("Nav2 Action Server non disponibile!")
-            return
+        if not self.nav_client.wait_for_server(timeout_sec=0.1):
+            return False
 
-        # Crea il messaggio PoseStamped (posizione del ladro in cordinate assolute)
         goal_msg = NavigateToPose.Goal()
         goal_msg.pose.header.frame_id = 'map'
         goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
@@ -221,34 +237,29 @@ class RobotManager(Node):
         goal_msg.pose.pose.position.x = float(x)
         goal_msg.pose.pose.position.y = float(y)
         goal_msg.pose.pose.position.z = 0.0
-        
-        # Orientamento (Quaternione). Mettiamo un valore neutro (guarda dritto)
         goal_msg.pose.pose.orientation.w = 1.0 
 
-        self.get_logger().info(f"Invio target Nav2 -> X: {x:.2f}, Y: {y:.2f}")
         self.is_navigating = True
         
-        # Invia l'azione in modo asincrono (per non bloccare il control_loop)
         send_goal_future = self.nav_client.send_goal_async(goal_msg)
         send_goal_future.add_done_callback(self.goal_response_callback)
+        return True
 
     def cancel_nav_goal(self):
-        """Interrompe la navigazione corrente (Freno a mano)."""
+        """Tira il freno a mano e cancella il viaggio in corso."""
         if self.nav_goal_handle is not None and self.is_navigating:
-            self.get_logger().info("Cancellazione del goal Nav2 corrente...")
+            self.get_logger().info("Cancellazione del viaggio Nav2 in corso...")
             self.nav_goal_handle.cancel_goal_async()
             self.is_navigating = False
 
-    # -- Callback interne di Nav2 (Servono per sapere se il goal è stato accettato o completato) --
     def goal_response_callback(self, future):
         goal_handle = future.result()
         if not goal_handle.accepted:
-            self.get_logger().warn("Goal rifiutato da Nav2!")
+            self.get_logger().error("Nav2 ha RIFIUTATO il target! (Riprovo...)")
             self.is_navigating = False
             return
-        
+            
         self.nav_goal_handle = goal_handle
-        # Chiediamo a Nav2 di avvisarci quando ha finito
         get_result_future = goal_handle.get_result_async()
         get_result_future.add_done_callback(self.get_result_callback)
 
@@ -256,11 +267,13 @@ class RobotManager(Node):
         status = future.result().status
         self.is_navigating = False
 
-     # -- Callback per il global manager (DA DEFINIRE DOPO) --
-
-    def global_order_callback(self, msg):
-        """Riceve ordini di accerchiamento dal Global Manager (Da implementare)."""
-        pass
+        # INCREMENTIAMO IL WAYPOINT SOLO SE SPOSTAMENTO COMPLETATO CON SUCCESSO
+        if status == GoalStatus.STATUS_SUCCEEDED:
+            if self.state == 'patrol':
+                self.get_logger().info(f"WP {self.current_wp_index} RAGGIUNTO! Passo al prossimo.")
+                self.current_wp_index = (self.current_wp_index + 1) % len(self.waypoints)
+        else:
+            self.get_logger().warn(f"Nav2 non è riuscito a raggiungere il WP {self.current_wp_index}. Stato: {status}")
 
 
 def main(args=None):

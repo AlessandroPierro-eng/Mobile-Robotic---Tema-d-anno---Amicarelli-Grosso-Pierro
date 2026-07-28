@@ -1,28 +1,49 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import Node
+from launch_ros.actions import SetParameter
+from nav2_common.launch import ReplaceString
 
-def generate_launch_description():
-    # 1. Recupera i percorsi dei pacchetti installati
+# ====================================================================
+# DIZIONARIO DELLE POSIZIONI INIZIALI (NAV2 / AMCL)
+# ====================================================================
+INITIAL_POSES = {
+    'robot1': {'x': '7.087', 'y': '-8.953', 'yaw': '1.551'},
+    'robot2': {'x': '8.313', 'y': '4.530', 'yaw': '3.062'},
+    'robot3': {'x': '-19.794', 'y': '6.758', 'yaw': '-1.516'}
+}
+
+def launch_setup(context, *args, **kwargs):
+    # 1. "Scompattiamo" il LaunchConfiguration per avere la stringa reale (es. "robot2")
+    robot_name_str = LaunchConfiguration('robot_name').perform(context)
+    use_sim_time = LaunchConfiguration('use_sim_time')
+
+    # 2. Peschiamo le coordinate dal dizionario
+    pose = INITIAL_POSES.get(robot_name_str, INITIAL_POSES['robot1'])
+
     pkg_warehouse_robot = get_package_share_directory('warehouse_robot')
-    pkg_warehouse_gazebo = get_package_share_directory('warehouse_gazebo') # <-- AGGIUNTO
+    pkg_warehouse_gazebo = get_package_share_directory('warehouse_gazebo')
     pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
 
-    # 2. Definisce i percorsi assoluti
-    # <-- LA MAPPA ORA LA PRENDE DA WAREHOUSE_GAZEBO -->
     map_file = os.path.join(pkg_warehouse_gazebo, 'map', 'mappa_magazzino.yaml') 
-    
     params_file = os.path.join(pkg_warehouse_robot, 'config', 'nav2_params.yaml')
-    rviz_config = os.path.join(pkg_warehouse_robot, 'config', 'nav_config.rviz')
 
-    # 3. Parametro fondamentale per il simulatore
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    # ====================================================================
+    # TROVA E SOSTITUISCI (Namespace + Coordinate Iniziali da Dizionario)
+    # ====================================================================
+    configured_params = ReplaceString(
+        source_file=params_file,
+        replacements={
+            '<robot_namespace>': robot_name_str,
+            '<init_x>': pose['x'],
+            '<init_y>': pose['y'],
+            '<init_yaw>': pose['yaw']
+        }
+    )
 
-    # 4. Chiama il motore di Nav2
     nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_nav2_bringup, 'launch', 'bringup_launch.py')
@@ -30,24 +51,42 @@ def generate_launch_description():
         launch_arguments={
             'map': map_file,
             'use_sim_time': use_sim_time,
-            'params_file': params_file,
-            'autostart': 'true'
+            'params_file': configured_params,
+            'autostart': 'true',
+            'use_namespace': 'true',
+            'namespace': robot_name_str,
         }.items()
     )
 
-    # 5. Lancia RViz2
-    rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        arguments=['-d', rviz_config],
-        parameters=[{'use_sim_time': use_sim_time}],
-        output='screen'
+    return [nav2_launch]
+
+
+def generate_launch_description():
+    # DICHIARAZIONI DEGLI ARGOMENTI
+    declare_robot_name = DeclareLaunchArgument(
+        'robot_name',
+        default_value='robot1',
+        description='Il namespace del robot'
+    )
+    
+    declare_use_sim_time = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Usa il tempo della simulazione'
     )
 
-    # 6. Costruisce e restituisce l'elenco delle azioni
+    force_sim_time = SetParameter(name='use_sim_time', value=True)
+
     ld = LaunchDescription()
-    ld.add_action(nav2_launch)
-    ld.add_action(rviz_node)
+    
+    # 1. Aggiungiamo le dichiarazioni
+    ld.add_action(declare_robot_name)
+    ld.add_action(declare_use_sim_time) # <-- Era questo il pezzo mancante!
+    
+    # 2. Forziamo il tempo
+    ld.add_action(force_sim_time)
+    
+    # 3. Lanciamo la logica Python
+    ld.add_action(OpaqueFunction(function=launch_setup))
 
     return ld

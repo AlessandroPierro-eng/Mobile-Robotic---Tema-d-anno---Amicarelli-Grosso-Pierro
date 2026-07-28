@@ -1,5 +1,14 @@
 <?xml version="1.0" ?>
 <robot name="turtlebot4" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- ========================================== -->
+  <!-- 1. GESTIONE DEL NAMESPACE -->
+  <!-- ========================================== -->
+  <xacro:arg name="namespace" default=""/>
+  
+  <xacro:property name="ns" value="$(arg namespace)"/>
+  <xacro:property name="tf_prefix" value="${ns + '/' if ns != '' else ''}"/>
+
   <!-- Base create3 model -->
   <xacro:include filename="$(find irobot_create_description)/urdf/create3.urdf.xacro" />
   <xacro:include filename="$(find turtlebot4_description)/urdf/sensors/rplidar.urdf.xacro" />
@@ -20,7 +29,7 @@
   <xacro:property name="oakd_lite_z_offset"             value="${9.25385*cm2m}"/>
 
   <!-- Turtlebot4 sensor definitions -->
-  <xacro:rplidar name="rplidar" parent_link="base_link" gazebo="$(arg gazebo)">
+  <xacro:rplidar name="rplidar" parent_link="base_link" tf_prefix="${tf_prefix}" gazebo="$(arg gazebo)">
     <origin xyz="${rplidar_x_offset} ${rplidar_y_offset} ${rplidar_z_offset + base_link_z_offset}"
             rpy="0 0 ${pi/2}"/>
   </xacro:rplidar>
@@ -29,36 +38,39 @@
     <origin xyz="${camera_mount_x_offset} ${camera_mount_y_offset} ${camera_mount_z_offset + base_link_z_offset}"/>
   </xacro:camera_bracket>
 
-  <xacro:oakd model="lite" parent_link="oakd_camera_bracket">
+  <xacro:oakd model="lite" parent_link="oakd_camera_bracket" tf_prefix="${tf_prefix}">
     <origin xyz="${oakd_lite_x_offset} ${oakd_lite_y_offset} ${oakd_lite_z_offset}"/>
   </xacro:oakd>
 
   <!-- Base footprint for navigation -->
   <link name="base_footprint" />
   <joint name="base_footprint_joint" type="fixed">
-    <!-- Create3's base_link is already on the ground -->
     <origin xyz="0 0 0" rpy="0 0 0" />
     <parent link="base_link" />
     <child link="base_footprint" />
   </joint>
 
-  <!-- il plugin per CONTROLLARE il giunto della staffa (Input) -->
+  <!-- ========================================== -->
+  <!-- 2. I PLUGIN GAZEBO -->
+  <!-- ========================================== -->
+
+  <!-- Plugin per CONTROLLARE la staffa -->
   <gazebo>
     <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
       <joint_name>oakd_camera_bracket_joint</joint_name>
-      <topic>bracket_vel</topic>
+      <topic>${ns}/bracket_vel</topic>
     </plugin>
   </gazebo>
 
-  <!-- NUOVO PLUGIN: per LEGGERE lo stato del giunto della staffa (Feedback) -->
+  <!-- Plugin per LEGGERE la staffa -->
   <gazebo>
     <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
-      <topic>bracket_joint_state</topic>
+      <topic>${ns}/bracket_joint_state</topic>
       <joint_name>oakd_camera_bracket_joint</joint_name>
     </plugin>
   </gazebo>
 
-  <!-- il plugin per muovere le ruote -->
+  <!-- Plugin per muovere le ruote -->
   <gazebo>
     <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
       <left_joint>left_wheel_joint</left_joint>
@@ -66,12 +78,20 @@
       <wheel_separation>0.233</wheel_separation>
       <wheel_radius>0.03575</wheel_radius>
       <odom_publish_frequency>30</odom_publish_frequency>
-      <topic>cmd_vel</topic>
-      <odom_topic>odom</odom_topic>
-      <tf_topic>tf</tf_topic>
-      <frame_id>odom</frame_id>
-      <!-- QUESTA E' LA RIGA CHE GEM MI HA FATTO MODIFICARE NEL PLUGIN -->
-      <child_frame_id>base_link</child_frame_id>
+      
+      <!-- Attivazione TF Nativo -->
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>true</publish_wheel_tf>
+      
+      <!-- I Topic usano il namespace normale -->
+      <topic>${ns}/cmd_vel</topic>
+      <odom_topic>${ns}/odom</odom_topic>
+      <tf_topic>/tf</tf_topic> 
+      
+      <!-- Frame ID per il TF con prefisso -->
+      <frame_id>${tf_prefix}odom</frame_id>
+      <child_frame_id>${tf_prefix}base_link</child_frame_id>
     </plugin>
   </gazebo>
 </robot>

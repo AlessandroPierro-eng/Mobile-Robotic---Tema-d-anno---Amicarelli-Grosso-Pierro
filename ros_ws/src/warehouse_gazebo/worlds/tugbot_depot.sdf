@@ -402,6 +402,187 @@
         <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
         <interpolate_x>true</interpolate_x>
       </animation>
+      
+      <script>
+        <loop>false</loop> <!-- Messo a false così non ricomincia da capo all'infinito -->
+        <delay_start>0.000000</delay_start>
+        <auto_start>true</auto_start>
+        
+        <trajectory id="0" type="walk" tension="0.6">
+            
+            <!-- FASE 1: Sotto terra (-3.0) per i primi 15 secondi, rivolto a 180 gradi (3.14) -->
+            <waypoint>
+                <time>0.0</time>
+                <pose>21.17 -2.57 -3.0 0 0 3.14</pose>
+            </waypoint>
+            <waypoint>
+                <time>15.0</time>
+                <pose>21.17 -2.57 -3.0 0 0 3.14</pose>
+            </waypoint>
+
+            <!-- FASE 2: Emerge in superficie (Z=1.0) -->
+            <waypoint>
+                <time>15.1</time>
+                <pose>21.17 -2.57 1.0 0 0 3.14</pose>
+            </waypoint>
+
+            <!-- Rotazione verso il primo bersaglio (calcolata a ~1.97 rad) -->
+            <waypoint>
+                <time>15.6</time>
+                <pose>21.17 -2.57 1.0 0 0 1.97</pose>
+            </waypoint>
+
+            <!-- Camminata verso (18.4, 4.0) -->
+            <waypoint>
+                <time>23.0</time>
+                <pose>18.4 4.0 1.0 0 0 1.97</pose>
+            </waypoint>
+
+            <!-- Rotazione a 180 gradi e sosta davanti allo scaffale -->
+            <waypoint>
+                <time>23.5</time>
+                <pose>18.4 4.0 1.0 0 0 3.14</pose>
+            </waypoint>
+            <waypoint>
+                <time>28.5</time>
+                <pose>18.4 4.0 1.0 0 0 3.14</pose>
+            </waypoint>
+
+            <!-- FASE 3: Si gira verso il basso (-90 gradi = -1.57 rad) e va a Y=1.1 -->
+            <waypoint>
+                <time>29.0</time>
+                <pose>18.4 4.0 1.0 0 0 -1.57</pose>
+            </waypoint>
+            <waypoint>
+                <time>31.9</time>
+                <pose>18.4 1.1 1.0 0 0 -1.57</pose>
+            </waypoint>
+
+            <!-- Si gira a 180 e cammina lungo il corridoio fino a X=14.75 -->
+            <waypoint>
+                <time>32.4</time>
+                <pose>18.4 1.1 1.0 0 0 3.14</pose>
+            </waypoint>
+            <waypoint>
+                <time>36.0</time>
+                <pose>14.75 1.1 1.0 0 0 3.14</pose>
+            </waypoint>
+
+            <!-- FASE 4: Si gira verso l'alto (90 gradi = 1.57 rad) e va a Y=1.9 -->
+            <waypoint>
+                <time>36.5</time>
+                <pose>14.75 1.1 1.0 0 0 1.57</pose>
+            </waypoint>
+            <waypoint>
+                <time>37.3</time>
+                <pose>14.75 1.9 1.0 0 0 1.57</pose>
+            </waypoint>
+
+            <!-- Rotazione a 0 gradi e sosta -->
+            <waypoint>
+                <time>37.8</time>
+                <pose>14.75 1.9 1.0 0 0 0.0</pose>
+            </waypoint>
+            <waypoint>
+                <time>42.8</time>
+                <pose>14.75 1.9 1.0 0 0 0.0</pose>
+            </waypoint>
+
+            <!-- FASE 5: Torna a Y=1.1 -->
+            <waypoint>
+                <time>43.3</time>
+                <pose>14.75 1.9 1.0 0 0 -1.57</pose>
+            </waypoint>
+            <waypoint>
+                <time>44.1</time>
+                <pose>14.75 1.1 1.0 0 0 -1.57</pose>
+            </waypoint>
+
+            <!-- Gira a 180 e procede fino a X=11.04 -->
+            <waypoint>
+                <time>44.6</time>
+                <pose>14.75 1.1 1.0 0 0 3.14</pose>
+            </waypoint>
+            <waypoint>
+                <time>48.3</time>
+                <pose>11.04 1.1 1.0 0 0 3.14</pose>
+            </waypoint>
+
+            <!-- FASE 6: Si gira verso l'alto e va a Y=5.5 -->
+            <waypoint>
+                <time>48.8</time>
+                <pose>11.04 1.1 1.0 0 0 1.57</pose>
+            </waypoint>
+            <waypoint>
+                <time>53.2</time>
+                <pose>11.04 5.5 1.0 0 0 1.57</pose>
+            </waypoint>
+
+            <!-- Rotazione a 180 gradi e sosta -->
+            <waypoint>
+                <time>53.7</time>
+                <pose>11.04 5.5 1.0 0 0 3.14</pose>
+            </waypoint>
+            <waypoint>
+                <time>58.7</time>
+                <pose>11.04 5.5 1.0 0 0 3.14</pose>
+            </waypoint>
+
+            <!-- FASE 7: Torna a Y=1.1 -->
+            <waypoint>
+                <time>59.2</time>
+                <pose>11.04 5.5 1.0 0 0 -1.57</pose>
+            </waypoint>
+            <waypoint>
+                <time>63.6</time>
+                <pose>11.04 1.1 1.0 0 0 -1.57</pose>
+            </waypoint>
+
+            <!-- Gira a 180 e procede fino a X=7.53 -->
+            <waypoint>
+                <time>64.1</time>
+                <pose>11.04 1.1 1.0 0 0 3.14</pose>
+            </waypoint>
+            <waypoint>
+                <time>67.6</time>
+                <pose>7.53 1.1 1.0 0 0 3.14</pose>
+            </waypoint>
+
+            <!-- FASE 8: Rotazione diagonale (calcolata a ~2.14 rad) per andare verso (5.77, 3.8) -->
+            <waypoint>
+                <time>68.1</time>
+                <pose>7.53 1.1 1.0 0 0 2.14</pose>
+            </waypoint>
+            <waypoint>
+                <time>71.3</time>
+                <pose>5.77 3.8 1.0 0 0 2.14</pose>
+            </waypoint>
+
+            <!-- Rotazione finale a 90 gradi e attesa infinita -->
+            <waypoint>
+                <time>71.8</time>
+                <pose>5.77 3.8 1.0 0 0 1.57</pose>
+            </waypoint>
+            <waypoint>
+                <!-- Metto un tempo altissimo (1 ora) per costringerlo a stare fermo fino a fine simulazione -->
+                <time>3600.0</time>
+                <pose>5.77 3.8 1.0 0 0 1.57</pose>
+            </waypoint>
+            
+        </trajectory>
+      </script>
+    </actor>
+       <!--
+    <actor name="actor_walking">
+      <skin>
+        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walk">
+        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
+        <interpolate_x>true</interpolate_x>
+      </animation>
     </actor> 
+    -->
   </world>
 </sdf>
