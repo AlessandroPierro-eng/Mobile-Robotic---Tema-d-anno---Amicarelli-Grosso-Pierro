@@ -404,185 +404,89 @@
       </animation>
       
       <script>
-        <loop>false</loop> <!-- Messo a false così non ricomincia da capo all'infinito -->
-        <delay_start>0.000000</delay_start>
+        <loop>true</loop>
+        <delay_start>0.0</delay_start>
         <auto_start>true</auto_start>
         
         <trajectory id="0" type="walk" tension="0.6">
             
-            <!-- FASE 1: Sotto terra (-3.0) per i primi 15 secondi, rivolto a 180 gradi (3.14) -->
-            <waypoint>
-                <time>0.0</time>
-                <pose>21.17 -2.57 -3.0 0 0 3.14</pose>
-            </waypoint>
-            <waypoint>
-                <time>15.0</time>
-                <pose>21.17 -2.57 -3.0 0 0 3.14</pose>
-            </waypoint>
+            <!-- 1. PARTENZA: Va dal punto iniziale al primo scaffale -->
+            <waypoint><time>0.0</time><pose>21.17 -2.57 1.0 0 0 1.97</pose></waypoint>
+            <waypoint><time>7.0</time><pose>18.4 4.0 1.0 0 0 1.97</pose></waypoint>
+            
+            <!-- 2. SOSTA SCAFFALE 1 -->
+            <waypoint><time>7.5</time><pose>18.4 4.0 1.0 0 0 3.14</pose></waypoint>
+            <waypoint><time>10.0</time><pose>18.4 4.0 1.0 0 0 3.14</pose></waypoint>
+            
+            <!-- 3. SPOSTAMENTO: Va al corridoio (Y=0.7), poi X=16.05 (+50cm) -->
+            <waypoint><time>10.5</time><pose>18.4 4.0 1.0 0 0 -1.57</pose></waypoint>
+            <waypoint><time>13.5</time><pose>18.4 0.5 1.0 0 0 -1.57</pose></waypoint>
+            <waypoint><time>14.0</time><pose>18.4 0.5 1.0 0 0 3.14</pose></waypoint>
+            <waypoint><time>17.5</time><pose>16.05 0.5 1.0 0 0 3.14</pose></waypoint>
+            
+            <!-- 4. SOSTA SCAFFALE 2 (X=16.05) -->
+            <waypoint><time>18.0</time><pose>16.05 0.5 1.0 0 0 1.57</pose></waypoint>
+            <waypoint><time>19.0</time><pose>16.05 1.9 1.0 0 0 1.57</pose></waypoint>
+            <waypoint><time>19.5</time><pose>16.05 1.9 1.0 0 0 0.0</pose></waypoint>
+            <waypoint><time>22.0</time><pose>16.05 1.9 1.0 0 0 0.0</pose></waypoint>
+            
+            <!-- 5. NUOVO SPOSTAMENTO: Torna al corridoio (Y=0.7) e va a X=14.6 -->
+            <waypoint><time>22.5</time><pose>16.05 1.9 1.0 0 0 -1.57</pose></waypoint>
+            <waypoint><time>23.5</time><pose>16.05 0.5 1.0 0 0 -1.57</pose></waypoint>
+            <waypoint><time>24.0</time><pose>16.05 0.5 1.0 0 0 3.14</pose></waypoint>
+            <waypoint><time>26.0</time><pose>14.2 0.5 1.0 0 0 3.14</pose></waypoint>
 
-            <!-- FASE 2: Emerge in superficie (Z=1.0) -->
-            <waypoint>
-                <time>15.1</time>
-                <pose>21.17 -2.57 1.0 0 0 3.14</pose>
-            </waypoint>
+            <!-- 6. NUOVA SOSTA EXTRA (X=14.6, Y=-1.0) -->
+            <waypoint><time>26.5</time><pose>14.2 0.5 1.0 0 0 -1.57</pose></waypoint> <!-- Svolta a Sud -->
+            <waypoint><time>28.5</time><pose>14.2 -1.0 1.0 0 0 -1.57</pose></waypoint>
+            <waypoint><time>29.0</time><pose>14.2 -1.0 1.0 0 0 3.14</pose></waypoint>  <!-- Fissa uno scaffale a Ovest -->
+            <waypoint><time>31.5</time><pose>14.2 -1.0 1.0 0 0 3.14</pose></waypoint>
 
-            <!-- Rotazione verso il primo bersaglio (calcolata a ~1.97 rad) -->
-            <waypoint>
-                <time>15.6</time>
-                <pose>21.17 -2.57 1.0 0 0 1.97</pose>
-            </waypoint>
+            <!-- 7. SPOSTAMENTO: Torna al corridoio e va al Terzo Scaffale (X=10.74, -30cm) -->
+            <waypoint><time>32.0</time><pose>14.2 -1.0 1.0 0 0 1.57</pose></waypoint>
+            <waypoint><time>34.0</time><pose>14.2 0.5 1.0 0 0 1.57</pose></waypoint>
+            <waypoint><time>34.5</time><pose>14.2 0.5 1.0 0 0 3.14</pose></waypoint>
+            <waypoint><time>38.0</time><pose>10.5 0.5 1.0 0 0 3.14</pose></waypoint>
+            
+            <!-- 8. SOSTA SCAFFALE 3 (X=10.74) -->
+            <waypoint><time>38.5</time><pose>10.5 0.5 1.0 0 0 1.57</pose></waypoint>
+            <waypoint><time>43.0</time><pose>10.5 5.5 1.0 0 0 1.57</pose></waypoint>
+            <waypoint><time>43.5</time><pose>10.5 5.5 1.0 0 0 3.14</pose></waypoint>
+            <waypoint><time>46.0</time><pose>10.5 5.5 1.0 0 0 3.14</pose></waypoint>
+            
+            <!-- 9. SPOSTAMENTO: Torna a corridoio (Y=0.7), poi X=7.53, poi bersaglio finale -->
+            <waypoint><time>46.5</time><pose>10.5 5.5 1.0 0 0 -1.57</pose></waypoint>
+            <waypoint><time>51.0</time><pose>10.5 0.5 1.0 0 0 -1.57</pose></waypoint>
+            <waypoint><time>51.5</time><pose>10.5 0.5 1.0 0 0 3.14</pose></waypoint>
+            <waypoint><time>54.5</time><pose>7.53 0.5 1.0 0 0 3.14</pose></waypoint>
+            
+            <!-- 10. SOSTA BERSAGLIO FINALE (5.77, 3.8) -->
+            <waypoint><time>55.0</time><pose>7.53 0.5 1.0 0 0 2.14</pose></waypoint>
+            <waypoint><time>58.0</time><pose>5.77 3.8 1.0 0 0 2.14</pose></waypoint>
+            <waypoint><time>58.5</time><pose>5.77 3.8 1.0 0 0 1.57</pose></waypoint>
+            <waypoint><time>63.0</time><pose>5.77 3.8 1.0 0 0 1.57</pose></waypoint>
 
-            <!-- Camminata verso (18.4, 4.0) -->
-            <waypoint>
-                <time>23.0</time>
-                <pose>18.4 4.0 1.0 0 0 1.97</pose>
-            </waypoint>
+            <!-- 11. LA FUGA -->
+            <waypoint><time>63.5</time><pose>5.77 3.8 1.0 0 0 -0.99</pose></waypoint>
+            <waypoint><time>66.5</time><pose>7.53 0.5 1.0 0 0 -0.99</pose></waypoint>
+            
+            <!-- Corre veloce in corridoio verso l'uscita (Est) -->
+            <waypoint><time>67.0</time><pose>7.53 0.5 1.0 0 0 0.0</pose></waypoint>
+            <waypoint><time>80.5</time><pose>21.17 0.5 1.0 0 0 0.0</pose></waypoint>
+            
+            <!-- Gira verso il basso per tornare al punto di spawn -->
+            <waypoint><time>81.0</time><pose>21.17 0.5 1.0 0 0 -1.57</pose></waypoint>
+            <waypoint><time>84.5</time><pose>21.17 -2.57 1.0 0 0 -1.57</pose></waypoint>
+            
+            <!-- 12. SOSTA ALLA PORTA (10 Secondi a 0 gradi) -->
+            <waypoint><time>85.0</time><pose>21.17 -2.57 1.0 0 0 0.0</pose></waypoint>
+            <waypoint><time>95.0</time><pose>21.17 -2.57 1.0 0 0 0.0</pose></waypoint>
 
-            <!-- Rotazione a 180 gradi e sosta davanti allo scaffale -->
-            <waypoint>
-                <time>23.5</time>
-                <pose>18.4 4.0 1.0 0 0 3.14</pose>
-            </waypoint>
-            <waypoint>
-                <time>28.5</time>
-                <pose>18.4 4.0 1.0 0 0 3.14</pose>
-            </waypoint>
-
-            <!-- FASE 3: Si gira verso il basso (-90 gradi = -1.57 rad) e va a Y=1.1 -->
-            <waypoint>
-                <time>29.0</time>
-                <pose>18.4 4.0 1.0 0 0 -1.57</pose>
-            </waypoint>
-            <waypoint>
-                <time>31.9</time>
-                <pose>18.4 1.1 1.0 0 0 -1.57</pose>
-            </waypoint>
-
-            <!-- Si gira a 180 e cammina lungo il corridoio fino a X=14.75 -->
-            <waypoint>
-                <time>32.4</time>
-                <pose>18.4 1.1 1.0 0 0 3.14</pose>
-            </waypoint>
-            <waypoint>
-                <time>36.0</time>
-                <pose>14.75 1.1 1.0 0 0 3.14</pose>
-            </waypoint>
-
-            <!-- FASE 4: Si gira verso l'alto (90 gradi = 1.57 rad) e va a Y=1.9 -->
-            <waypoint>
-                <time>36.5</time>
-                <pose>14.75 1.1 1.0 0 0 1.57</pose>
-            </waypoint>
-            <waypoint>
-                <time>37.3</time>
-                <pose>14.75 1.9 1.0 0 0 1.57</pose>
-            </waypoint>
-
-            <!-- Rotazione a 0 gradi e sosta -->
-            <waypoint>
-                <time>37.8</time>
-                <pose>14.75 1.9 1.0 0 0 0.0</pose>
-            </waypoint>
-            <waypoint>
-                <time>42.8</time>
-                <pose>14.75 1.9 1.0 0 0 0.0</pose>
-            </waypoint>
-
-            <!-- FASE 5: Torna a Y=1.1 -->
-            <waypoint>
-                <time>43.3</time>
-                <pose>14.75 1.9 1.0 0 0 -1.57</pose>
-            </waypoint>
-            <waypoint>
-                <time>44.1</time>
-                <pose>14.75 1.1 1.0 0 0 -1.57</pose>
-            </waypoint>
-
-            <!-- Gira a 180 e procede fino a X=11.04 -->
-            <waypoint>
-                <time>44.6</time>
-                <pose>14.75 1.1 1.0 0 0 3.14</pose>
-            </waypoint>
-            <waypoint>
-                <time>48.3</time>
-                <pose>11.04 1.1 1.0 0 0 3.14</pose>
-            </waypoint>
-
-            <!-- FASE 6: Si gira verso l'alto e va a Y=5.5 -->
-            <waypoint>
-                <time>48.8</time>
-                <pose>11.04 1.1 1.0 0 0 1.57</pose>
-            </waypoint>
-            <waypoint>
-                <time>53.2</time>
-                <pose>11.04 5.5 1.0 0 0 1.57</pose>
-            </waypoint>
-
-            <!-- Rotazione a 180 gradi e sosta -->
-            <waypoint>
-                <time>53.7</time>
-                <pose>11.04 5.5 1.0 0 0 3.14</pose>
-            </waypoint>
-            <waypoint>
-                <time>58.7</time>
-                <pose>11.04 5.5 1.0 0 0 3.14</pose>
-            </waypoint>
-
-            <!-- FASE 7: Torna a Y=1.1 -->
-            <waypoint>
-                <time>59.2</time>
-                <pose>11.04 5.5 1.0 0 0 -1.57</pose>
-            </waypoint>
-            <waypoint>
-                <time>63.6</time>
-                <pose>11.04 1.1 1.0 0 0 -1.57</pose>
-            </waypoint>
-
-            <!-- Gira a 180 e procede fino a X=7.53 -->
-            <waypoint>
-                <time>64.1</time>
-                <pose>11.04 1.1 1.0 0 0 3.14</pose>
-            </waypoint>
-            <waypoint>
-                <time>67.6</time>
-                <pose>7.53 1.1 1.0 0 0 3.14</pose>
-            </waypoint>
-
-            <!-- FASE 8: Rotazione diagonale (calcolata a ~2.14 rad) per andare verso (5.77, 3.8) -->
-            <waypoint>
-                <time>68.1</time>
-                <pose>7.53 1.1 1.0 0 0 2.14</pose>
-            </waypoint>
-            <waypoint>
-                <time>71.3</time>
-                <pose>5.77 3.8 1.0 0 0 2.14</pose>
-            </waypoint>
-
-            <!-- Rotazione finale a 90 gradi e attesa infinita -->
-            <waypoint>
-                <time>71.8</time>
-                <pose>5.77 3.8 1.0 0 0 1.57</pose>
-            </waypoint>
-            <waypoint>
-                <!-- Metto un tempo altissimo (1 ora) per costringerlo a stare fermo fino a fine simulazione -->
-                <time>3600.0</time>
-                <pose>5.77 3.8 1.0 0 0 1.57</pose>
-            </waypoint>
+            <!-- Rotazione finale per chiudere il loop! -->
+            <waypoint><time>95.5</time><pose>21.17 -2.57 1.0 0 0 1.97</pose></waypoint>
             
         </trajectory>
       </script>
     </actor>
-       <!--
-    <actor name="actor_walking">
-      <skin>
-        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
-        <scale>1.0</scale>
-      </skin>
-      <animation name="walk">
-        <filename>https://fuel.gazebosim.org/1.0/Mingfei/models/actor/tip/files/meshes/walk.dae</filename>
-        <interpolate_x>true</interpolate_x>
-      </animation>
-    </actor> 
-    -->
   </world>
 </sdf>

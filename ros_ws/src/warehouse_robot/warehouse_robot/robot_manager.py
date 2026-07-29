@@ -43,8 +43,14 @@ class RobotManager(Node):
         self.last_intruder_pose = None
         self.tactical_target = None
         
-        # Waypoints della ronda
-        self.waypoints = [[7.7, 4.0], [-19.5, 6.1], [-20.5, -6.5], [6.8, -8.3]]
+        # Waypoints della ronda [X, Y, YAW in radianti]
+        # Modifica questi YAW in base alla direzione verso cui vuoi che guardi
+        self.waypoints = [
+            [8.313, 4.530, 3.01752],   # Esempio: guarda verso Nord (+90 gradi)
+            [-19.794, 6.758, -1.65652], # Esempio: guarda verso Ovest (+180 gradi)
+            [-20.5, -6.5, -0.0718797],   # Esempio: guarda verso Sud (-90 gradi)
+            [7.087, -8.953, 1.49781]    # Esempio: guarda verso Est (0 gradi)
+        ]
         self.current_wp_index = self.current_wp_index % len(self.waypoints)
 
         # ==========================================
@@ -114,7 +120,6 @@ class RobotManager(Node):
         self.tactical_target = [msg.point.x, msg.point.y]
         self.received_tactical_order = True
         self.get_logger().warn(f"[TATTICA] Ricevuto ordine dal Global Manager -> X={msg.point.x:.2f}, Y={msg.point.y:.2f}")
-
 
     def state_callback(self, msg):
         cmd = msg.data.lower()
@@ -188,8 +193,8 @@ class RobotManager(Node):
         if self.state == 'patrol':
             if not self.is_navigating:
                 wp = self.waypoints[self.current_wp_index]
-                # Inviamo la meta. NON INCREMENTIAMO L'INDICE QUI!
-                success = self.send_nav_goal(wp[0], wp[1])
+                # Inviamo la meta passando anche il terzo parametro (yaw)
+                success = self.send_nav_goal(wp[0], wp[1], wp[2])
                 if success:
                     self.get_logger().info(f"Ronda: Invio ordine al WP {self.current_wp_index} -> {wp}")
                 
@@ -203,6 +208,7 @@ class RobotManager(Node):
                 
                 if not self.is_navigating or dist > 0.5:
                     self.current_chase_target = [tx, ty]
+                    # In pursuit non serve specificare lo yaw, usa il default (0.0)
                     self.send_nav_goal(tx, ty)
                     
         elif self.state == 'tactical':
@@ -226,7 +232,7 @@ class RobotManager(Node):
     # -------------------------------------------------------------------------
     # I MUSCOLI (Gestione asincrona Nav2)
     # -------------------------------------------------------------------------
-    def send_nav_goal(self, x, y):
+    def send_nav_goal(self, x, y, yaw=0.0):
         if not self.nav_client.wait_for_server(timeout_sec=0.1):
             return False
 
@@ -237,7 +243,15 @@ class RobotManager(Node):
         goal_msg.pose.pose.position.x = float(x)
         goal_msg.pose.pose.position.y = float(y)
         goal_msg.pose.pose.position.z = 0.0
-        goal_msg.pose.pose.orientation.w = 1.0 
+        
+        # Conversione da Yaw (Radianti) a Quaternione per Nav2
+        qz = math.sin(yaw / 2.0)
+        qw = math.cos(yaw / 2.0)
+        
+        goal_msg.pose.pose.orientation.x = 0.0
+        goal_msg.pose.pose.orientation.y = 0.0
+        goal_msg.pose.pose.orientation.z = qz
+        goal_msg.pose.pose.orientation.w = qw 
 
         self.is_navigating = True
         
