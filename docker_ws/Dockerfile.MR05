@@ -1,35 +1,32 @@
 FROM ros:jazzy
 
-# 1. Aggiornamento sistema, strumenti base e compilatori per Python
-# Nota: aggiunto 'python3-numpy' per risolvere l'errore di build di rosidl_generator_py
+# System updates, basic tools, and Python build dependencies
 RUN apt update -y && apt install -y wget git nano curl python3-dev build-essential libgl1 libglib2.0-0 python3-numpy
 
-# 2. Strumenti grafici di debug per ROS 2
-# Nota: aggiunto rviz2 per la visualizzazione delle costmap e dei robot
+# ROS 2 graphical debugging and visualization tools
 RUN apt update -y && apt install -y ros-jazzy-rqt-graph ros-jazzy-rqt-tf-tree ros-jazzy-rviz2
 
-# 3. AMBIENTE E ROBOT: Gazebo Harmonic e URDF/Xacro
+# Simulation environment and robot description packages
 RUN apt-get update -y && apt-get install -y ros-jazzy-ros-gz ros-jazzy-xacro ros-jazzy-turtlebot4-description ros-jazzy-irobot-create-* && rm -rf /var/lib/apt/lists/*
 
-# 3.5. MAPPATURA: SLAM Toolbox
+# SLAM and teleoperation packages
 RUN apt update -y && apt install -y ros-jazzy-slam-toolbox ros-jazzy-teleop-twist-keyboard
 
-# 4. NAVIGAZIONE: Nav2 Stack
+# Navigation2 stack
 RUN apt update -y && apt install -y ros-jazzy-navigation2 ros-jazzy-nav2-bringup
 
-# 5. LOCALIZZAZIONE E SENSORI: EKF e AprilTags
+# Localization and sensor processing packages
 RUN apt update -y && apt install -y ros-jazzy-robot-localization ros-jazzy-apriltag-ros
 
-# 6. VISIONE ARTIFICIALE: OpenCV e ROS2
+# Computer vision dependencies
 RUN apt update -y && apt install -y ros-jazzy-vision-opencv
 
-# 7. INSTALLAZIONE 'uv' (Sostituto ottimizzato di pip --- visto dal c3lab del prof. Brescia ---)
+# Install 'uv' package manager for optimized Python environments
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-# 8. YOLOv8 tramite Virtual Environment gestito da uv
-# Creiamo l'ambiente virtuale con ACCESSO ALLE LIBRERIE DI SISTEMA (ROS 2)
+# Create a virtual environment with system site-packages access for ROS 2 compatibility
 RUN uv venv --system-site-packages /opt/venv
 
-# Attiviamo l'ambiente SOLO per questa istruzione e installiamo YOLO e NumPy
+# Install YOLOv8 and compatible NumPy version within the virtual environment
 RUN . /opt/venv/bin/activate && uv pip install "numpy<2.0.0" ultralytics

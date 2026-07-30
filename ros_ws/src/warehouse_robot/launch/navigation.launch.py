@@ -8,7 +8,7 @@ from launch_ros.actions import SetParameter
 from nav2_common.launch import ReplaceString
 
 # ====================================================================
-# DIZIONARIO DELLE POSIZIONI INIZIALI (NAV2 / AMCL)
+# INITIAL POSES DICTIONARY (NAV2 / AMCL)
 # ====================================================================
 INITIAL_POSES = {
     'robot1': {'x': '7.087', 'y': '-8.953', 'yaw': '1.551'},
@@ -17,11 +17,11 @@ INITIAL_POSES = {
 }
 
 def launch_setup(context, *args, **kwargs):
-    # 1. "Scompattiamo" il LaunchConfiguration per avere la stringa reale (es. "robot2")
+    # Extract the actual string value from LaunchConfiguration
     robot_name_str = LaunchConfiguration('robot_name').perform(context)
     use_sim_time = LaunchConfiguration('use_sim_time')
 
-    # 2. Peschiamo le coordinate dal dizionario
+    # Retrieve initial coordinates from the dictionary based on robot name
     pose = INITIAL_POSES.get(robot_name_str, INITIAL_POSES['robot1'])
 
     pkg_warehouse_robot = get_package_share_directory('warehouse_robot')
@@ -32,7 +32,7 @@ def launch_setup(context, *args, **kwargs):
     params_file = os.path.join(pkg_warehouse_robot, 'config', 'nav2_params.yaml')
 
     # ====================================================================
-    # TROVA E SOSTITUISCI (Namespace + Coordinate Iniziali da Dizionario)
+    # PARAMETER STRING REPLACEMENT (Namespace & Initial Coordinates)
     # ====================================================================
     configured_params = ReplaceString(
         source_file=params_file,
@@ -62,31 +62,33 @@ def launch_setup(context, *args, **kwargs):
 
 
 def generate_launch_description():
-    # DICHIARAZIONI DEGLI ARGOMENTI
+    # ====================================================================
+    # LAUNCH ARGUMENT DECLARATIONS
+    # ====================================================================
     declare_robot_name = DeclareLaunchArgument(
         'robot_name',
         default_value='robot1',
-        description='Il namespace del robot'
+        description='Robot namespace'
     )
     
     declare_use_sim_time = DeclareLaunchArgument(
         'use_sim_time',
         default_value='true',
-        description='Usa il tempo della simulazione'
+        description='Use simulation (Gazebo) clock'
     )
 
     force_sim_time = SetParameter(name='use_sim_time', value=True)
 
     ld = LaunchDescription()
     
-    # 1. Aggiungiamo le dichiarazioni
+    # 1. Add argument declarations
     ld.add_action(declare_robot_name)
-    ld.add_action(declare_use_sim_time) # <-- Era questo il pezzo mancante!
+    ld.add_action(declare_use_sim_time)
     
-    # 2. Forziamo il tempo
+    # 2. Force simulation time globally
     ld.add_action(force_sim_time)
     
-    # 3. Lanciamo la logica Python
+    # 3. Execute Python setup logic
     ld.add_action(OpaqueFunction(function=launch_setup))
 
     return ld

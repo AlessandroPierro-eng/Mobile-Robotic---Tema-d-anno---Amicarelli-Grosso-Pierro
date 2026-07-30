@@ -2,14 +2,14 @@
 <robot name="turtlebot4" xmlns:xacro="http://ros.org/wiki/xacro">
 
   <!-- ========================================== -->
-  <!-- 1. GESTIONE DEL NAMESPACE -->
+  <!-- 1. NAMESPACE MANAGEMENT -->
   <!-- ========================================== -->
   <xacro:arg name="namespace" default=""/>
   
   <xacro:property name="ns" value="$(arg namespace)"/>
   <xacro:property name="tf_prefix" value="${ns + '/' if ns != '' else ''}"/>
 
-  <!-- Base create3 model -->
+  <!-- Base Create3 model -->
   <xacro:include filename="$(find irobot_create_description)/urdf/create3.urdf.xacro" />
   <xacro:include filename="$(find turtlebot4_description)/urdf/sensors/rplidar.urdf.xacro" />
   <xacro:include filename="$(find turtlebot4_description)/urdf/sensors/oakd.urdf.xacro" />
@@ -51,10 +51,10 @@
   </joint>
 
   <!-- ========================================== -->
-  <!-- 2. I PLUGIN GAZEBO -->
+  <!-- 2. GAZEBO PLUGINS -->
   <!-- ========================================== -->
 
-  <!-- Plugin per CONTROLLARE la staffa -->
+  <!-- Camera bracket joint controller -->
   <gazebo>
     <plugin filename="gz-sim-joint-controller-system" name="gz::sim::systems::JointController">
       <joint_name>oakd_camera_bracket_joint</joint_name>
@@ -62,7 +62,7 @@
     </plugin>
   </gazebo>
 
-  <!-- Plugin per LEGGERE la staffa -->
+  <!-- Camera bracket joint state publisher -->
   <gazebo>
     <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
       <topic>${ns}/bracket_joint_state</topic>
@@ -70,7 +70,7 @@
     </plugin>
   </gazebo>
 
-  <!-- Plugin per muovere le ruote -->
+  <!-- Differential drive controller -->
   <gazebo>
     <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
       <left_joint>left_wheel_joint</left_joint>
@@ -79,17 +79,17 @@
       <wheel_radius>0.03575</wheel_radius>
       <odom_publish_frequency>30</odom_publish_frequency>
       
-      <!-- Attivazione TF Nativo -->
+      <!-- Enable native TF publication -->
       <publish_odom>true</publish_odom>
       <publish_odom_tf>true</publish_odom_tf>
       <publish_wheel_tf>true</publish_wheel_tf>
       
-      <!-- I Topic usano il namespace normale -->
+      <!-- Topic configuration with standard namespace -->
       <topic>${ns}/cmd_vel</topic>
       <odom_topic>${ns}/odom</odom_topic>
       <tf_topic>/tf</tf_topic> 
       
-      <!-- Frame ID per il TF con prefisso -->
+      <!-- TF Frame IDs with namespace prefix -->
       <frame_id>${tf_prefix}odom</frame_id>
       <child_frame_id>${tf_prefix}base_link</child_frame_id>
     </plugin>

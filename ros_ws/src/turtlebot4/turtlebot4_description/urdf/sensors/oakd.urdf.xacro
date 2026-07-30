@@ -15,7 +15,7 @@
   <xacro:property name="collision_offset_x"   value="${-1.1*cm2m}" />
   <xacro:property name="collision_offset_y"   value="${0*cm2m}" />
   <xacro:property name="collision_offset_z"   value="${-0.5*cm2m}" />
-
+s
   <xacro:property name="base_frame" value="${name}_link"/>
 
   <joint name="${name}_joint" type="fixed">
@@ -121,7 +121,6 @@
   <!-- Gazebo links and joints -->
   <gazebo reference="${name}_rgb_camera_frame">
     <sensor name="rgbd_camera" type="rgbd_camera">
-      <!-- ECCO L'UNICO POSTO DOVE SERVE IL PREFISSO -->
       <gz_frame_id>${tf_prefix}${name}_rgb_camera_frame</gz_frame_id>
       <camera>
         <horizontal_fov>1.25</horizontal_fov>
@@ -133,7 +132,6 @@
           <near>0.3</near>
           <far>100</far>
         </clip>
-        <!-- E QUI PER L'OPTICAL FRAME -->
         <optical_frame_id>${tf_prefix}${name}_rgb_camera_optical_frame</optical_frame_id>
       </camera>
       <always_on>1</always_on>

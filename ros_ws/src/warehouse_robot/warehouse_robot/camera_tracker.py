@@ -10,58 +10,58 @@ class CameraTracker(Node):
     def __init__(self):
         super().__init__('camera_tracker')
         
-        # --- PARAMETRI DI CONTROLLO INSEGUIMENTO (Priorità 1) ---
-        self.kp = 4.0          # Molto più reattivo (prima era 1.0)
-        self.max_vel = 3.0     # Limite alzato per permettere scatti veloci
-        self.deadband = 0.05   # Zona morta: ignora errori sotto i 5 cm
+        # --- TRACKING CONTROL PARAMETERS (Priority 1) ---
+        self.kp = 4.0          # Proportional gain for active tracking
+        self.max_vel = 3.0     # Maximum angular velocity limit
+        self.deadband = 0.05   # Deadband threshold to prevent control jitter
         
-        # --- PARAMETRI STATO E COMPORTAMENTO (Priorità 2 & 3) ---
-        self.robot_state = 'patrol'             # Stato di default
-        self.camera_joint_angle = 0.0           # Memoria dell'angolo attuale
+        # --- STATE AND BEHAVIOR PARAMETERS (Priority 2 & 3) ---
+        self.robot_state = 'patrol'             # Default operational state
+        self.camera_joint_angle = 0.0           # Current joint angle state memory
         self.camera_joint_name = 'oakd_camera_bracket_joint'   
         
-        self.patrol_angle = 1.57                # 90 gradi in radianti (+ o - a seconda del lato)
-        self.kp_patrol = 2.0                    # Reattività per tornare a 90 gradi
-        self.sweep_speed = 1.5                  # Velocità massima durante la spazzata
+        self.patrol_angle = 1.57                # Default patrol angle (90 degrees in radians)
+        self.kp_patrol = 2.0                    # Proportional gain for patrol reset
+        self.sweep_speed = 1.5                  # Maximum angular velocity during search sweep
         
-        # --- SOTTOSCRIZIONI (Tutte relative al namespace) ---
+        # --- ROS 2 SUBSCRIPTIONS ---
         
-        # 1. Topic dello stato del robot
+        # Robot operational state subscription
         self.state_sub = self.create_subscription(
             String, 'state', self.state_callback, 10)
             
-        # 2. Topic per leggere l'angolazione attuale del giunto
+        # Camera bracket joint state subscription
         self.joint_sub = self.create_subscription(
             JointState, 'joint_states', self.joint_callback, 10)
             
-        # 3. Topic di puntamento YOLO
+        # YOLO target tracking subscription
         self.subscription = self.create_subscription(
             PointStamped, 'intruder_tracking', self.tracking_callback, 10)
             
-        # --- PUBBLICAZIONE ---
+        # --- ROS 2 PUBLISHERS ---
         self.joint_pub = self.create_publisher(Float64, 'bracket_vel', 10)
             
-        self.get_logger().info("Camera Tracker 3D Ibrido avviato. Stato iniziale: PATROL")
+        self.get_logger().info("Hybrid 3D Camera Tracker initialized. Initial state: PATROL")
 
     def state_callback(self, msg):
-        """Aggiorna la variabile interna dello stato del robot"""
+        """Updates internal robot operational state."""
         self.robot_state = msg.data.lower()
 
     def joint_callback(self, msg):
-        """Legge l'angolo attuale del giunto della telecamera"""
+        """Updates current camera bracket joint angle memory."""
         try:
-            # Cerca il giunto della telecamera nell'array dei giunti del robot
+            # Locate the camera joint within the joint state array
             idx = msg.name.index(self.camera_joint_name)
             self.camera_joint_angle = msg.position[idx]
         except ValueError:
-            pass # Il messaggio non conteneva il giunto della telecamera
+            pass # Target joint not present in the current message
 
     def tracking_callback(self, msg):
-        """Il "cervello" della telecamera: esegue la priorità corretta ad ogni frame"""
+        """Main control loop prioritizing tracking, patrol, and search behaviors."""
         cmd_msg = Float64()
         
         # ==========================================
-        # PRIORITÀ 1: LADRO IN VISTA (Riflesso Incondizionato)
+        # PRIORITY 1: TARGET ACQUIRED (Active Tracking)
         # ==========================================
         if msg.point.z > 0.0:
             error_x = msg.point.x 
@@ -71,7 +71,7 @@ class CameraTracker(Node):
             else:
                 angular_velocity = -self.kp * error_x 
             
-            # Saturazione
+            # Velocity saturation
             if angular_velocity > self.max_vel:
                 angular_velocity = self.max_vel
             elif angular_velocity < -self.max_vel:
@@ -80,28 +80,26 @@ class CameraTracker(Node):
             cmd_msg.data = float(angular_velocity)
             
         # ==========================================
-        # PRIORITÀ 2 & 3: BERSAGLIO PERSO / NESSUN LADRO
+        # PRIORITY 2 & 3: TARGET LOST / DEFAULT BEHAVIOR
         # ==========================================
         else:
             if self.robot_state == 'patrol':
-                # --- Priorità 2: Tieni i 90 Gradi (P-Controller) ---
+                # --- Priority 2: Maintain Patrol Angle (P-Controller) ---
                 error_angle = self.patrol_angle - self.camera_joint_angle
                 vel = self.kp_patrol * error_angle
                 
-                # Saturazione più morbida per non scattare violentemente verso i 90°
+                # Soft velocity saturation for smooth positional reset
                 cmd_msg.data = float(max(-1.5, min(1.5, vel)))
                 
             elif self.robot_state in ['pursuit', 'tactical', 'search']:
-                # --- Priorità 3: Sweep di Ricerca Attiva ---
-                # Usiamo il tempo assoluto per creare un'onda coseno
-                # Questo genera un movimento dolce che va a destra e a sinistra ciclicamente
+                # --- Priority 3: Active Search Sweep ---
+                # Generate a cosine wave based on absolute time for continuous scanning
                 t = self.get_clock().now().nanoseconds / 1e9
                 
-                # cos(t) oscilla tra -1 e 1. Moltiplicato per sweep_speed dà la velocità desiderata.
                 cmd_msg.data = float(math.cos(t) * self.sweep_speed)
                 
             else:
-                # Fallback di sicurezza (es. stato sconosciuto)
+                # Safety fallback for undefined states
                 cmd_msg.data = 0.0
                 
         self.joint_pub.publish(cmd_msg)
@@ -119,4 +117,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-

@@ -7,7 +7,7 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import String
 from functools import partial
 
-# Import per la matematica e l'Algoritmo Ungherese
+# Math and Hungarian Algorithm dependencies
 import numpy as np
 from scipy.optimize import linear_sum_assignment
 import math
@@ -16,32 +16,32 @@ class GlobalManager(Node):
     def __init__(self):
         super().__init__('global_manager')
         self.get_logger().warn("===================================================")
-        self.get_logger().warn("   [START] Avvio Global Fleet Manager...           ")
+        self.get_logger().warn("   [START] Initializing Global Fleet Manager...    ")
         self.get_logger().warn("===================================================")
 
         # ==========================================
-        # 1. PARAMETRI E STATO GLOBALE
+        # 1. GLOBAL STATE AND PARAMETERS
         # ==========================================
         self.robots = ['robot1', 'robot2', 'robot3']
         
-        self.state = 'patrol'  # patrol, tactical, search, objective_reached
+        self.state = 'patrol'  # Allowed states: patrol, tactical, search, objective_reached
         
-        # Memoria della flotta
+        # Fleet memory mapping
         self.robot_poses = {robot: None for robot in self.robots}
-        self.all_robots_ready = False # Flag per stampare a schermo quando tutti i robot sono connessi
+        self.all_robots_ready = False
         
-        # Memoria del target e Coordinate Tattiche (Nav2)
+        # Target memory and tactical coordinates
         self.intruder_seen = False
         self.last_intruder_pose = None
         self.last_intruder_time = 0.0
         self.search_start_time = 0.0
         
-        # Punti di blocco strategici (Coordinate Nav2 logiche)
+        # Strategic choke points (Nav2 logical coordinates)
         self.door = [7.97, -6.22]
         self.stairs = [6.9, 1.89]
 
         # ==========================================
-        # 2. CREAZIONE DINAMICA INTERFACCE ROS 2
+        # 2. ROS 2 DYNAMIC INTERFACES
         # ==========================================
         self.tactical_pubs = {}
         self.state_pubs = {}
@@ -49,26 +49,26 @@ class GlobalManager(Node):
         self.intruder_subs = []
 
         for robot in self.robots:
-            # Publisher
+            # Publishers
             self.tactical_pubs[robot] = self.create_publisher(
                 PointStamped, f'/{robot}/tactical_order', 10)
             
             self.state_pubs[robot] = self.create_publisher(
                 String, f'/{robot}/state', 10)
 
-            # Subscriber
+            # Subscribers
             self.odom_subs.append(self.create_subscription(
                 Odometry, f'/{robot}/odom', partial(self.odom_callback, robot_id=robot), 10))
             
-            # NOTA: Ho aggiunto il 'partial' anche qui per sapere CHI invia l'allarme!
+            # Use partial to identify the alarm source
             self.intruder_subs.append(self.create_subscription(
                 PointStamped, f'/{robot}/global_intruder_position', partial(self.intruder_callback, robot_id=robot), 10))
 
         # ==========================================
-        # 3. IL CICLO DECISIONALE (3 Secondi)
+        # 3. DECISION LOOP (3-Second Interval)
         # ==========================================
         self.timer = self.create_timer(3.0, self.global_control_loop)
-        self.get_logger().info("[INIT] Global Manager PRONTO. In attesa dei robot...")
+        self.get_logger().info("[INIT] Global Manager READY. Waiting for robots...")
 
     # -------------------------------------------------------------------------
     # CALLBACKS
@@ -78,33 +78,33 @@ class GlobalManager(Node):
         y = msg.pose.pose.position.y
         self.robot_poses[robot_id] = [x, y]
         
-        # Stampa una tantum quando tutti i robot sono online
+        # Log once when all robots are initialized
         if not self.all_robots_ready and all(pose is not None for pose in self.robot_poses.values()):
             self.all_robots_ready = True
-            self.get_logger().warn("[ODOM] Tutti e 3 i robot sono online! La flotta è operativa.")
+            self.get_logger().warn("[ODOM] All robots online. Fleet is operational.")
 
     def intruder_callback(self, msg, robot_id):
         self.intruder_seen = True
         self.last_intruder_pose = [msg.point.x, msg.point.y]
         self.last_intruder_time = self.get_clock().now().nanoseconds / 1e9
         
-        self.get_logger().error(f"[ALLARME] >>> RICEVUTO DA {robot_id.upper()} <<<")
-        self.get_logger().error(f"[ALLARME] Posizione ladro globale stimata: X={msg.point.x:.2f}, Y={msg.point.y:.2f}")
+        self.get_logger().error(f"[ALARM] >>> TRIGGERED BY {robot_id.upper()} <<<")
+        self.get_logger().error(f"[ALARM] Estimated global intruder position: X={msg.point.x:.2f}, Y={msg.point.y:.2f}")
 
     # -------------------------------------------------------------------------
-    # MACCHINA A STATI GLOBALE
+    # GLOBAL STATE MACHINE
     # -------------------------------------------------------------------------
     def global_control_loop(self):
         if any(pose is None for pose in self.robot_poses.values()):
-            self.get_logger().info("[ATTESA] Aspetto l'odometria di tutti i robot per iniziare a calcolare...", throttle_duration_sec=6.0)
+            self.get_logger().info("[STANDBY] Waiting for complete fleet odometry to initiate processing...", throttle_duration_sec=6.0)
             return
 
         current_time = self.get_clock().now().nanoseconds / 1e9
         next_state = self.state
 
-        self.get_logger().info(f"[HEARTBEAT] Stato Attuale: {self.state.upper()} | Ladro a vista: {self.intruder_seen}")
+        self.get_logger().info(f"[HEARTBEAT] Current State: {self.state.upper()} | Target Visible: {self.intruder_seen}")
 
-        # --- A. VALUTAZIONE TRANSIZIONI ---
+        # --- A. STATE TRANSITION EVALUATION ---
         if self.state == 'patrol':
             if self.intruder_seen:
                 next_state = 'tactical'
@@ -116,19 +116,19 @@ class GlobalManager(Node):
                 next_state = 'search'
                 self.search_start_time = current_time
                 self.intruder_seen = False
-                self.get_logger().warn("[TIMEOUT] Ladro perso di vista da oltre 10s. Passo in SEARCH.")
+                self.get_logger().warn("[TIMEOUT] Target lost for >10s. Transitioning to SEARCH.")
                 
         elif self.state == 'search':
             if self.intruder_seen:
                 next_state = 'tactical'
             elif (current_time - self.search_start_time) > 15.0:
                 next_state = 'patrol'
-                self.get_logger().warn("[TIMEOUT] Ricerca fallita da oltre 15s. Torno in PATROL.")
+                self.get_logger().warn("[TIMEOUT] Search failed for >15s. Transitioning to PATROL.")
 
-        # --- B. APPLICAZIONE TRANSIZIONI ---
+        # --- B. STATE TRANSITION EXECUTION ---
         if next_state != self.state:
             self.get_logger().error(f"===================================================")
-            self.get_logger().error(f"  [TRANSIZIONE GM] {self.state.upper()} -> {next_state.upper()}  ")
+            self.get_logger().error(f"  [TRANSITION] {self.state.upper()} -> {next_state.upper()}  ")
             self.get_logger().error(f"===================================================")
             self.state = next_state
             
@@ -137,57 +137,57 @@ class GlobalManager(Node):
             elif self.state == 'patrol':
                 self.broadcast_state('patrol')
 
-        # --- C. AZIONI CONTINUE ---
+        # --- C. CONTINUOUS ACTIONS ---
         if self.state == 'tactical':
             self.calculate_and_send_tactical_positions()
             
         elif self.state == 'objective_reached':
-            self.get_logger().info("[VITTORIA] LADRO CATTURATO! Simulazione completata.", throttle_duration_sec=5.0)
+            self.get_logger().info("[SUCCESS] TARGET APPREHENDED! Simulation complete.", throttle_duration_sec=5.0)
 
     # -------------------------------------------------------------------------
-    # FUNZIONI OPERATIVE E MATEMATICA
+    # OPERATIONAL FUNCTIONS AND MATHEMATICS
     # -------------------------------------------------------------------------
     def broadcast_state(self, state_str):
         msg = String()
         msg.data = state_str
         for robot in self.robots:
             self.state_pubs[robot].publish(msg)
-        self.get_logger().info(f"[BROADCAST] Inviato ordine di stato '{state_str.upper()}' a tutta la flotta.")
+        self.get_logger().info(f"[BROADCAST] Dispatched state order '{state_str.upper()}' to fleet.")
 
     def calculate_and_send_tactical_positions(self):
         """
-        Calcola l'assegnazione ottimale tra robot e obiettivi strategici.
+        Calculates optimal robot-to-target assignment using the Hungarian algorithm.
         """
         if not self.last_intruder_pose:
             return
 
-        self.get_logger().info("--- AVVIO CALCOLO ASSEGNAZIONI (ALGORITMO UNGHERESE) ---")
+        self.get_logger().info("--- STARTING ASSIGNMENT CALCULATION (HUNGARIAN ALGORITHM) ---")
 
-        # I 3 obiettivi da coprire
+        # Strategic targets
         targets = [
             self.last_intruder_pose,
             self.door,
             self.stairs
         ]
         
-        target_names = ["Ladro", "Porta", "Scale"]
+        target_names = ["Target", "Door", "Stairs"]
 
         cost_matrix = np.zeros((len(self.robots), len(targets)))
         
-        # Riempimento matrice costi (Distanza di Manhattan)
+        # Populate cost matrix using Manhattan distance
         for i, robot in enumerate(self.robots):
             rx, ry = self.robot_poses[robot]
             for j, target in enumerate(targets):
                 tx, ty = target
                 cost = abs(rx - tx) + abs(ry - ty)
                 cost_matrix[i, j] = cost
-                # Stampa opzionale della matrice dei costi (commentata per non intasare, decommenta se serve)
-                # self.get_logger().info(f"Costo {robot} -> {target_names[j]}: {cost:.2f}m")
+                # Optional: log individual costs
+                # self.get_logger().info(f"Cost {robot} -> {target_names[j]}: {cost:.2f}m")
 
-        # Risoluzione con Algoritmo Ungherese
+        # Solve assignment problem
         row_ind, col_ind = linear_sum_assignment(cost_matrix)
 
-        # Invio degli ordini ottimali ai robot
+        # Dispatch optimal orders to robots
         for idx in range(len(self.robots)):
             robot = self.robots[row_ind[idx]]
             target_idx = col_ind[idx]
@@ -195,7 +195,7 @@ class GlobalManager(Node):
             target_name = target_names[target_idx]
             cost_dist = cost_matrix[row_ind[idx], col_ind[idx]]
 
-            self.get_logger().warn(f"[ORDINE] {robot.upper()} assegnato a: {target_name.upper()} (X:{assigned_target[0]:.2f}, Y:{assigned_target[1]:.2f}) | Dist stima: {cost_dist:.2f}m")
+            self.get_logger().warn(f"[ORDER] {robot.upper()} assigned to: {target_name.upper()} (X:{assigned_target[0]:.2f}, Y:{assigned_target[1]:.2f}) | Est. Dist: {cost_dist:.2f}m")
 
             msg = PointStamped()
             msg.header.stamp = self.get_clock().now().to_msg()
@@ -204,14 +204,14 @@ class GlobalManager(Node):
             msg.point.y = float(assigned_target[1])
             msg.point.z = 0.0
             
-            # Pubblicazione sul topic tactical_order
+            # Publish tactical order
             self.tactical_pubs[robot].publish(msg)
             
         self.get_logger().info("--------------------------------------------------------")
 
     def check_objective_reached(self):
         """
-        Controlla se ALMENO UN robot della flotta è a meno di 1.0 metri dal ladro.
+        Checks if at least one robot in the fleet is within 1.0 meter of the target.
         """
         if not self.last_intruder_pose:
             return False
@@ -224,14 +224,14 @@ class GlobalManager(Node):
                 
             rx, ry = pose
             
-            # Usiamo la distanza Euclidea per il check finale di "cattura"
+            # Euclidean distance for final capture condition
             dist = math.hypot(rx - tx, ry - ty)
             
-            # Logghiamo le distanze in tempo reale durante il pursuit
-            self.get_logger().info(f"[DISTANZE] {robot.upper()} dista {dist:.2f}m dal bersaglio.")
+            # Log real-time distances during pursuit
+            self.get_logger().info(f"[DISTANCES] {robot.upper()} is {dist:.2f}m from target.")
             
             if dist < 1.0:  
-                self.get_logger().error(f"!!! CATTURA EFFETTUATA DA {robot.upper()} !!! (Distanza: {dist:.2f}m)")
+                self.get_logger().error(f"!!! TARGET APPREHENDED BY {robot.upper()} !!! (Distance: {dist:.2f}m)")
                 return True
                 
         return False

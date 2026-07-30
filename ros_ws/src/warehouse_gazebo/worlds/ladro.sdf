@@ -17,83 +17,60 @@
         
         <trajectory id="0" type="walk" tension="0.6">
             
-            <!-- 0. SOSTA ALLA PORTA: Sta fermo a scrutare per 30 secondi -->
+            <!-- Initial synchronization delay (30s) -->
             <waypoint><time>0.0</time><pose>21.17 -2.57 1.0 0 0 1.97</pose></waypoint>
             <waypoint><time>30.0</time><pose>21.17 -2.57 1.0 0 0 1.97</pose></waypoint>
 
-            <!-- ======================================================================= -->
-            <!-- 1. PARTENZA: A 30.0s netti inizia a camminare -->
+            <!-- Predefined warehouse patrol trajectory -->
             <waypoint><time>37.0</time><pose>18.4 4.0 1.0 0 0 1.97</pose></waypoint>
-            
-            <!-- 2. SOSTA SCAFFALE 1 -->
             <waypoint><time>37.5</time><pose>18.4 4.0 1.0 0 0 3.14</pose></waypoint>
             <waypoint><time>40.0</time><pose>18.4 4.0 1.0 0 0 3.14</pose></waypoint>
-            
-            <!-- 3. SPOSTAMENTO: Va al corridoio (Y=0.5), poi X=16.05 (+50cm) -->
             <waypoint><time>40.5</time><pose>18.4 4.0 1.0 0 0 -1.57</pose></waypoint>
             <waypoint><time>43.5</time><pose>18.4 0.5 1.0 0 0 -1.57</pose></waypoint>
             <waypoint><time>44.0</time><pose>18.4 0.5 1.0 0 0 3.14</pose></waypoint>
             <waypoint><time>47.5</time><pose>16.05 0.5 1.0 0 0 3.14</pose></waypoint>
-            
-            <!-- 4. SOSTA SCAFFALE 2 (X=16.05) -->
             <waypoint><time>48.0</time><pose>16.05 0.5 1.0 0 0 1.57</pose></waypoint>
             <waypoint><time>49.0</time><pose>16.05 1.9 1.0 0 0 1.57</pose></waypoint>
             <waypoint><time>49.5</time><pose>16.05 1.9 1.0 0 0 0.0</pose></waypoint>
             <waypoint><time>52.0</time><pose>16.05 1.9 1.0 0 0 0.0</pose></waypoint>
-            
-            <!-- 5. NUOVO SPOSTAMENTO: Torna al corridoio (Y=0.5) e va a X=14.2 -->
             <waypoint><time>52.5</time><pose>16.05 1.9 1.0 0 0 -1.57</pose></waypoint>
             <waypoint><time>53.5</time><pose>16.05 0.5 1.0 0 0 -1.57</pose></waypoint>
             <waypoint><time>54.0</time><pose>16.05 0.5 1.0 0 0 3.14</pose></waypoint>
             <waypoint><time>56.0</time><pose>14.2 0.5 1.0 0 0 3.14</pose></waypoint>
-
-            <!-- 6. NUOVA SOSTA EXTRA (X=14.2, Y=-1.0) -->
             <waypoint><time>56.5</time><pose>14.2 0.5 1.0 0 0 -1.57</pose></waypoint>
             <waypoint><time>58.5</time><pose>14.2 -1.0 1.0 0 0 -1.57</pose></waypoint>
             <waypoint><time>59.0</time><pose>14.2 -1.0 1.0 0 0 3.14</pose></waypoint>
             <waypoint><time>61.5</time><pose>14.2 -1.0 1.0 0 0 3.14</pose></waypoint>
-
-            <!-- 7. SPOSTAMENTO: Torna al corridoio e va al Terzo Scaffale (X=10.5) -->
             <waypoint><time>62.0</time><pose>14.2 -1.0 1.0 0 0 1.57</pose></waypoint>
             <waypoint><time>64.0</time><pose>14.2 0.5 1.0 0 0 1.57</pose></waypoint>
             <waypoint><time>64.5</time><pose>14.2 0.5 1.0 0 0 3.14</pose></waypoint>
             <waypoint><time>68.0</time><pose>10.5 0.5 1.0 0 0 3.14</pose></waypoint>
-            
-            <!-- 8. SOSTA SCAFFALE 3 (X=10.5) -->
             <waypoint><time>68.5</time><pose>10.5 0.5 1.0 0 0 1.57</pose></waypoint>
             <waypoint><time>73.0</time><pose>10.5 5.5 1.0 0 0 1.57</pose></waypoint>
             <waypoint><time>73.5</time><pose>10.5 5.5 1.0 0 0 3.14</pose></waypoint>
             <waypoint><time>76.0</time><pose>10.5 5.5 1.0 0 0 3.14</pose></waypoint>
-            
-            <!-- 9. SPOSTAMENTO: Torna a corridoio (Y=0.5), poi X=7.53, poi bersaglio finale -->
             <waypoint><time>76.5</time><pose>10.5 5.5 1.0 0 0 -1.57</pose></waypoint>
             <waypoint><time>81.0</time><pose>10.5 0.5 1.0 0 0 -1.57</pose></waypoint>
             <waypoint><time>81.5</time><pose>10.5 0.5 1.0 0 0 3.14</pose></waypoint>
             <waypoint><time>84.5</time><pose>7.53 0.5 1.0 0 0 3.14</pose></waypoint>
-            
-            <!-- 10. SOSTA BERSAGLIO FINALE (5.77, 3.8) -->
             <waypoint><time>85.0</time><pose>7.53 0.5 1.0 0 0 2.14</pose></waypoint>
             <waypoint><time>88.0</time><pose>5.77 3.8 1.0 0 0 2.14</pose></waypoint>
             <waypoint><time>88.5</time><pose>5.77 3.8 1.0 0 0 1.57</pose></waypoint>
             <waypoint><time>93.0</time><pose>5.77 3.8 1.0 0 0 1.57</pose></waypoint>
-
-            <!-- 11. LA FUGA -->
             <waypoint><time>93.5</time><pose>5.77 3.8 1.0 0 0 -0.99</pose></waypoint>
             <waypoint><time>96.5</time><pose>7.53 0.5 1.0 0 0 -0.99</pose></waypoint>
             <waypoint><time>97.0</time><pose>7.53 0.5 1.0 0 0 0.0</pose></waypoint>
             <waypoint><time>110.5</time><pose>21.17 0.5 1.0 0 0 0.0</pose></waypoint>
             <waypoint><time>111.0</time><pose>21.17 0.5 1.0 0 0 -1.57</pose></waypoint>
             <waypoint><time>114.5</time><pose>21.17 -2.57 1.0 0 0 -1.57</pose></waypoint>
-            
-            <!-- 12. SOSTA ALLA PORTA E SPARIZIONE -->
             <waypoint><time>115.0</time><pose>21.17 -2.57 1.0 0 0 0.0</pose></waypoint>
             <waypoint><time>117.0</time><pose>21.17 -2.57 1.0 0 0 0.0</pose></waypoint>
             
-            <!-- 13. LA BOTOLA: Cade a Z = -10.0 in un decimo di secondo e resta lì -->
+            <!-- Despawn workaround: translate actor below ground level (Z = -10.0) -->
             <waypoint><time>117.1</time><pose>21.17 -2.57 -10.0 0 0 0.0</pose></waypoint>
             <waypoint><time>10000.0</time><pose>21.17 -2.57 -10.0 0 0 0.0</pose></waypoint>
 
-            <!-- Chiusura loop -->
+            <!-- Loop closure -->
             <waypoint><time>10000.5</time><pose>21.17 -2.57 -10.0 0 0 1.97</pose></waypoint>
             
         </trajectory>
