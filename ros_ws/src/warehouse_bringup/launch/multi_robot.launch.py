@@ -124,10 +124,6 @@ def generate_launch_description():
     # ====================================================================
     # 5. AVVIO DEL GLOBAL FLEET MANAGER
     # ====================================================================
-    # Alla fine del ciclo, delay_time è diventato 60.0.
-    # Vogliamo che il manager parta 10 secondi DOPO il Robot 3 (che è partito a 40.0).
-    # Quindi il timer per il manager sarà a 50.0 secondi.
-    
     global_manager_action = Node(
         package='fleet_manager',
         executable='global_manager',
@@ -144,5 +140,30 @@ def generate_launch_description():
             actions=[global_manager_action]
         )
     )
+
+    # ====================================================================
+    # 6. REGIA DEL LADRO: INGRESSO E FUGA
+    # ====================================================================
+    ladro_sdf_path = os.path.join(gazebo_pkg, 'worlds', 'ladro.sdf')
+
+    spawn_ladro_node = Node(
+        package='ros_gz_sim',
+        executable='create',
+        arguments=[
+            '-file', ladro_sdf_path,
+            '-name', 'attore_ladro'
+        ],
+        output='screen'
+    )
+
+    # INGRESSO: Spawna il ladro a 60 secondi (10 secondi dopo il Global Manager)
+    ld.add_action(
+        TimerAction(
+            period=60.0,
+            actions=[spawn_ladro_node]
+        )
+    )
+
+    # Nessun comando di rimozione qui: il ladro gestisce la propria scomparsa nell'SDF!
 
     return ld
