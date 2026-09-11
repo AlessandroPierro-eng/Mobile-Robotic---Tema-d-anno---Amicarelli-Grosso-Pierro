@@ -32,8 +32,6 @@
     </inertial>
   </link>
 
-  <!-- Il blocco preserveFixedJoint è stato rimosso appositamente -->
-
   <gazebo reference="${link_name}">
     <xacro:material_black/>
   </gazebo>

@@ -67,7 +67,7 @@ def generate_launch_description():
             '-x', x_pose,
             '-y', y_pose,
             '-z', '0.1',
-            '-Y', yaw_pose  # Uppercase '-Y' is required by Gazebo for yaw orientation
+            '-Y', yaw_pose  
         ],
         output='screen'
     )

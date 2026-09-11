@@ -15,7 +15,7 @@ find_package(ros_gz_sim REQUIRED)
 find_package(ros_gz_bridge REQUIRED)
 find_package(robot_state_publisher REQUIRED)
 
-# Nuove dipendenze per il Local Manager
+# Nuove dipendenze per il Local Manager e il TF Merger
 find_package(rclpy REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav2_msgs REQUIRED)
@@ -56,11 +56,18 @@ install(PROGRAMS
   RENAME camera_tracker
 )
 
-# Nuovo nodo: Local Manager
+# Nodo: Local Manager
 install(PROGRAMS
   warehouse_robot/robot_manager.py
   DESTINATION lib/${PROJECT_NAME}
   RENAME robot_manager
+)
+
+# Nuovo Nodo: TF Merger (per visualizzazione RViz unificata)
+install(PROGRAMS
+  warehouse_robot/tf_merger.py
+  DESTINATION lib/${PROJECT_NAME}
+  RENAME tf_merger
 )
 
 ament_package()
