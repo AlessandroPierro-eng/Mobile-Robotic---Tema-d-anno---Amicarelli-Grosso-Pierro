@@ -24,22 +24,25 @@ class CameraTracker(Node):
         self.kp_patrol = 2.0                    # Proportional gain for patrol reset
         self.sweep_speed = 1.5                  # Maximum angular velocity during search sweep
         
-        # --- ROS 2 SUBSCRIPTIONS ---
+        # --- TARGET MEMORY (Decoupled from ROS callbacks) ---
+        self.target_x = 0.0
+        self.target_z = -1.0                   
         
-        # Robot operational state subscription
+        # --- ROS 2 SUBSCRIPTIONS ---
         self.state_sub = self.create_subscription(
             String, 'state', self.state_callback, 10)
             
-        # Camera bracket joint state subscription
         self.joint_sub = self.create_subscription(
             JointState, 'joint_states', self.joint_callback, 10)
             
-        # YOLO target tracking subscription
         self.subscription = self.create_subscription(
             PointStamped, 'intruder_tracking', self.tracking_callback, 10)
             
         # --- ROS 2 PUBLISHERS ---
         self.joint_pub = self.create_publisher(Float64, 'bracket_vel', 10)
+        
+        # --- MAIN CONTROL LOOP (10 Hz independent timer) ---
+        self.control_timer = self.create_timer(0.1, self.control_loop)
             
         self.get_logger().info("Hybrid 3D Camera Tracker initialized. Initial state: PATROL")
 
@@ -50,26 +53,28 @@ class CameraTracker(Node):
     def joint_callback(self, msg):
         """Updates current camera bracket joint angle memory."""
         try:
-            # Locate the camera joint within the joint state array
             idx = msg.name.index(self.camera_joint_name)
             self.camera_joint_angle = msg.position[idx]
         except ValueError:
-            pass # Target joint not present in the current message
+            pass 
 
     def tracking_callback(self, msg):
-        """Main control loop prioritizing tracking, patrol, and search behaviors."""
+        """Updates target coordinates asynchronously. Decoupled from kinematics."""
+        self.target_x = msg.point.x
+        self.target_z = msg.point.z
+
+    def control_loop(self):
+        """Main kinematic loop prioritizing tracking, patrol, and search behaviors."""
         cmd_msg = Float64()
         
         # ==========================================
         # PRIORITY 1: TARGET ACQUIRED (Active Tracking)
         # ==========================================
-        if msg.point.z > 0.0:
-            error_x = msg.point.x 
-            
-            if abs(error_x) < self.deadband:
+        if self.target_z > 0.0:
+            if abs(self.target_x) < self.deadband:
                 angular_velocity = 0.0
             else:
-                angular_velocity = -self.kp * error_x 
+                angular_velocity = -self.kp * self.target_x 
             
             # Velocity saturation
             if angular_velocity > self.max_vel:
@@ -95,7 +100,6 @@ class CameraTracker(Node):
                 # --- Priority 3: Active Search Sweep ---
                 # Generate a cosine wave based on absolute time for continuous scanning
                 t = self.get_clock().now().nanoseconds / 1e9
-                
                 cmd_msg.data = float(math.cos(t) * self.sweep_speed)
                 
             else:
@@ -103,6 +107,7 @@ class CameraTracker(Node):
                 cmd_msg.data = 0.0
                 
         self.joint_pub.publish(cmd_msg)
+
 
 def main(args=None):
     rclpy.init(args=args)

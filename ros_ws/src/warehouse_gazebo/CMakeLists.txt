@@ -18,6 +18,7 @@ install(
 install(
   PROGRAMS scripts/mock_yolo.py
   DESTINATION lib/${PROJECT_NAME}
+  RENAME mock_yolo
 )
 
 ament_package()

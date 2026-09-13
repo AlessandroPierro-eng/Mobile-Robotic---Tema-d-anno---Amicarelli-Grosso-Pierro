@@ -3,21 +3,22 @@
 Global Fleet Manager for Multi-Robot Coordination.
 Implements the Hungarian Algorithm (Linear Sum Assignment) for optimal 
 task allocation and tactical positioning during pursuit operations.
+Integrates federated TF injection to maintain architectural independence.
 """
 
 import time
 import math
-import sys  
-from functools import partial
-
 import numpy as np
 from scipy.optimize import linear_sum_assignment
+from functools import partial
 
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, DurabilityPolicy
 from geometry_msgs.msg import PointStamped
-from nav_msgs.msg import Odometry
 from std_msgs.msg import String
+from tf2_msgs.msg import TFMessage
+from tf2_ros import Buffer
 
 
 class GlobalManager(Node):
@@ -40,6 +41,7 @@ class GlobalManager(Node):
         self.last_intruder_time = 0.0
         self.search_start_time = 0.0
         
+        # Static geographical points of interest
         self.tactical_choke_points = {
             'door': [7.97, -6.22],
             'stairs': [6.90, 1.89]
@@ -47,16 +49,22 @@ class GlobalManager(Node):
 
         self.tactical_pubs = {}
         self.state_pubs = {}
-        self.odom_subs = []
         self.intruder_subs = []
-
+        self.tf_subs = []
+        
+        # Core spatial transformation infrastructure (Standalone Buffer)
+        self.tf_buffer = Buffer()
+        
         self._setup_interfaces()
 
-        self.timer = self.create_timer(3.0, self.global_control_loop)
-        self.get_logger().info("Global Manager initialized. Awaiting fleet telemetry.")
+        # System control loop execution rate (1.0 Hz)
+        self.timer = self.create_timer(1.0, self.global_control_loop)
+        self.get_logger().info("Global Manager initialized. Awaiting federated TF telemetry.")
 
     def _setup_interfaces(self) -> None:
-        """Initializes distributed publishers and subscribers for the fleet."""
+        """Initializes distributed publishers, subscribers, and federated TF injectors."""
+        qos_static = QoSProfile(depth=10, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+
         for robot in self.robots:
             self.tactical_pubs[robot] = self.create_publisher(
                 PointStamped, f'/{robot}/tactical_order', 10)
@@ -64,21 +72,49 @@ class GlobalManager(Node):
             self.state_pubs[robot] = self.create_publisher(
                 String, f'/{robot}/state', 10)
 
-            self.odom_subs.append(self.create_subscription(
-                Odometry, f'/{robot}/odom', 
-                partial(self.odom_callback, robot_id=robot), 10))
-            
             self.intruder_subs.append(self.create_subscription(
                 PointStamped, f'/{robot}/global_intruder_position', 
                 partial(self.intruder_callback, robot_id=robot), 10))
 
-    def odom_callback(self, msg: Odometry, robot_id: str) -> None:
-        """Updates the internal representation of the fleet's spatial distribution."""
-        self.robot_poses[robot_id] = [msg.pose.pose.position.x, msg.pose.pose.position.y]
-        
-        if not self.all_robots_ready and all(p is not None for p in self.robot_poses.values()):
+            # Independent TF injection architecture
+            self.tf_subs.append(self.create_subscription(
+                TFMessage, f'/{robot}/tf', 
+                self.dynamic_tf_callback, 10))
+                
+            self.tf_subs.append(self.create_subscription(
+                TFMessage, f'/{robot}/tf_static', 
+                self.static_tf_callback, qos_static))
+
+    def dynamic_tf_callback(self, msg: TFMessage) -> None:
+        """Injects dynamic coordinate frames into the internal spatial buffer."""
+        for transform in msg.transforms:
+            self.tf_buffer.set_transform(transform, 'global_manager_internal')
+
+    def static_tf_callback(self, msg: TFMessage) -> None:
+        """Injects static coordinate frames into the internal spatial buffer."""
+        for transform in msg.transforms:
+            self.tf_buffer.set_transform_static(transform, 'global_manager_internal')
+
+    def update_robot_poses(self) -> None:
+        """Computes true global coordinates mapping AMCL corrections and odometry."""
+        all_ready = True
+        for robot in self.robots:
+            try:
+                transform = self.tf_buffer.lookup_transform(
+                    'map', 
+                    f'{robot}/base_link', 
+                    rclpy.time.Time()
+                )
+                self.robot_poses[robot] = [
+                    transform.transform.translation.x,
+                    transform.transform.translation.y
+                ]
+            except Exception:
+                all_ready = False
+                
+        if not self.all_robots_ready and all_ready and all(p is not None for p in self.robot_poses.values()):
             self.all_robots_ready = True
-            self.get_logger().info("Fleet initialization complete. Odometry synchronized.")
+            self.get_logger().info("Fleet initialization complete. AMCL-corrected TF synchronized.")
 
     def intruder_callback(self, msg: PointStamped, robot_id: str) -> None:
         """Processes target detection events and updates the global state."""
@@ -92,8 +128,10 @@ class GlobalManager(Node):
 
     def global_control_loop(self) -> None:
         """Executes the core control logic and state transitions for fleet behavior."""
+        self.update_robot_poses()
+        
         if not self.all_robots_ready:
-            self.get_logger().info("Awaiting fleet telemetry...", throttle_duration_sec=6.0)
+            self.get_logger().info("Awaiting fleet telemetry (Federated TF)...", throttle_duration_sec=6.0)
             return
 
         current_time = self.get_clock().now().nanoseconds / 1e9
@@ -132,12 +170,11 @@ class GlobalManager(Node):
                     "============================================================\n" +
                     "||                                                        ||\n" +
                     "||      TARGET APPREHENDED - SIMULATION COMPLETED         ||\n" +
-                    "||      Initiating fleet shutdown sequence...             ||\n" +
+                    "||      Tactical operations halted. Fleet standing by.    ||\n" +
                     "||                                                        ||\n" +
                     "============================================================"
                 )
-                time.sleep(1.5)  
-                sys.exit(0)      
+                # Node execution is intentionally preserved to anchor the final state.
 
         if self.state == 'tactical':
             self.calculate_and_send_tactical_positions()
@@ -160,10 +197,12 @@ class GlobalManager(Node):
         targets = [
             self.last_intruder_pose,
             self.tactical_choke_points['door'],
-            self.tactical_choke_points['stairs']
+            self.last_intruder_pose
+            #self.tactical_choke_points['stairs']
         ]
         
-        target_names = ['INTRUDER', 'DOOR', 'STAIRS']
+        # target_names = ['INTRUDER', 'DOOR', 'STAIRS']
+        target_names = ['INTRUDER', 'DOOR', 'INTRUDER']
         
         cost_matrix = np.zeros((len(self.robots), len(targets)))
         
@@ -197,10 +236,11 @@ class GlobalManager(Node):
             
             self.tactical_pubs[robot].publish(msg)
             
-            time.sleep(0.5)
+            # Rate limiting interval to prevent ROS timer callback overrun
+            time.sleep(0.1)
 
     def check_objective_reached(self) -> bool:
-        """Evaluates if the interception criteria are met (agent within 1.0m of target)."""
+        """Evaluates if interception criteria are met (agent within 1.5m of target)."""
         if not self.last_intruder_pose:
             return False
             
@@ -212,7 +252,7 @@ class GlobalManager(Node):
             
             dist = math.hypot(pose[0] - tx, pose[1] - ty)
             
-            if dist < 1.0:  
+            if dist < 1.5:  
                 self.get_logger().info(f"Target apprehended by {robot}. Final distance: {dist:.2f}m.")
                 return True
                 
@@ -220,13 +260,11 @@ class GlobalManager(Node):
 
 
 def main(args=None) -> None:
-    """Execution entry point."""
+    """Node execution entry point."""
     rclpy.init(args=args)
     node = GlobalManager()
     try:
         rclpy.spin(node)
-    except SystemExit:
-        node.get_logger().info("Node gracefully terminated.")
     except KeyboardInterrupt:
         pass
     finally:

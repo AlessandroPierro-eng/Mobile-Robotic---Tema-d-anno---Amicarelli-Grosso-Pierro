@@ -96,8 +96,27 @@ def generate_launch_description():
             output='screen'
         )
 
+        # YOLO Detector node 
+        yolo_action = Node(
+            package='warehouse_robot',
+            executable='yolo_detector',
+            namespace=robot_name,
+            parameters=[{'use_sim_time': True}],
+            output='screen'
+        )
+
+        # Camera Tracker node 
+        tracker_action = Node(
+            package='warehouse_robot',
+            executable='camera_tracker',
+            namespace=robot_name,
+            parameters=[{'use_sim_time': True}],
+            output='screen'
+        )
+       
+        # IMPORTANT: here is possible to add in the "actions" list yolo_action and tracker_action in order to add the yolo detection  
         ld.add_action(
-            TimerAction(period=nav2_delay, actions=[nav2_action, manager_action])
+            TimerAction(period=nav2_delay, actions=[nav2_action, manager_action, tracker_action])
         )
 
         # Increment temporal offsets for subsequent agents
@@ -129,22 +148,21 @@ def generate_launch_description():
     )
 
     # ====================================================================
-    # 6. DYNAMIC ACTOR (INTRUDER) INJECTION
+    # 6. SYNTHETIC INTRUDER (TARGET SIMULATOR) INJECTION
     # ====================================================================
-    ladro_sdf_path = os.path.join(gazebo_pkg, 'worlds', 'ladro.sdf')
-
-    spawn_ladro_node = Node(
-        package='ros_gz_sim',
-        executable='create',
-        arguments=[
-            '-file', ladro_sdf_path,
-            '-name', 'attore_ladro'
-        ],
-        output='screen'
+    # Replaces physical Gazebo actor to bypass neural network overhead.
+    # Deployment is intentionally delayed to demonstrate patrol behavior.
+    
+    mock_intruder_node = Node(
+        package='warehouse_gazebo', 
+        executable='mock_yolo',
+        name='mock_yolo_node',
+        output='screen',
+        parameters=[{'use_sim_time': True}]
     )
 
     ld.add_action(
-        TimerAction(period=135.0, actions=[spawn_ladro_node])
+        TimerAction(period=250.0, actions=[mock_intruder_node])
     )
 
     return ld
