@@ -1,19 +1,30 @@
 #!/usr/bin/env python3
 
+import math
 import rclpy
 from rclpy.node import Node
+from rclpy.duration import Duration
+from rclpy.qos import QoSProfile, DurabilityPolicy
 from geometry_msgs.msg import PointStamped
 from visualization_msgs.msg import Marker
 from std_msgs.msg import String
 from tf2_ros import Buffer, TransformListener
-from rclpy.duration import Duration
 import tf2_geometry_msgs
-import math
 
 class MockYoloNode(Node):
     def __init__(self):
         super().__init__('mock_yolo_node')
         
+        # --- Global Simulation Events Publisher ---
+        # Utilizing Transient Local QoS ensures late-joining subscribers (like the Visualizer)
+        # still receive the initial spawn event.
+        qos_profile = QoSProfile(depth=10, durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        self.event_pub = self.create_publisher(String, '/simulation_events', qos_profile)
+        
+        # Announce payload injection into the environment
+        spawn_msg = String(data="INTRUDER_SPAWNED")
+        self.event_pub.publish(spawn_msg)
+
         # --- Fleet configuration and publisher instantiation ---
         self.robots = ['robot1', 'robot2', 'robot3']
         self.tracking_pubs = {}
@@ -33,7 +44,6 @@ class MockYoloNode(Node):
         self.is_apprehended = False
 
         # --- Hardware constraints simulation (FOV and depth limits) ---
-        # Temporarily extended spatial threshold to facilitate validation
         self.max_distance = 17.0
         self.fov_rad = math.radians(70.0 / 2.0)
 
@@ -52,12 +62,11 @@ class MockYoloNode(Node):
         self.intruder_x, self.intruder_y = self.waypoints[0]
         self.intruder_z = 1.0  
         
-        # Drastically reduced constant linear velocity (m/s)
         self.speed = 0.05       
         
         # Idle state temporal parameters
         self.is_paused = False
-        self.pause_duration = 1.0  # Required idle duration at waypoints (seconds)
+        self.pause_duration = 1.0  
         self.pause_end_time = None
         
         # --- System control loop execution rate (10 Hz) ---
@@ -87,12 +96,10 @@ class MockYoloNode(Node):
         marker.pose.position.y = float(self.intruder_y)
         marker.pose.position.z = float(self.intruder_z)
         
-        # Spatial dimensions 
         marker.scale.x = 0.5
         marker.scale.y = 0.5
         marker.scale.z = 1.8 
         
-        # Visual properties
         marker.color.a = 1.0 
         marker.color.r = 1.0 
         marker.color.g = 0.0
@@ -104,17 +111,13 @@ class MockYoloNode(Node):
         """Iterative update of kinematics, temporal states, and perception boundaries."""
         current_time = self.get_clock().now()
 
-        # 1. Update intruder state via FSM (Transit vs. Idle vs. Apprehended)
         if self.is_apprehended:
-            # Halt all kinematic operations; target is captured
             pass
         elif self.is_paused:
-            # Temporal evaluation for idle state expiration
             if current_time >= self.pause_end_time:
                 self.is_paused = False
                 self.current_wp_idx = (self.current_wp_idx + 1) % len(self.waypoints)
         else:
-            # Constant velocity kinematic execution
             target_x, target_y = self.waypoints[self.current_wp_idx]
             dx = target_x - self.intruder_x
             dy = target_y - self.intruder_y
@@ -122,7 +125,6 @@ class MockYoloNode(Node):
             step = self.speed * self.dt
 
             if distance_to_wp < step:
-                # Target achieved: Enforce spatial alignment and initiate idle state
                 self.intruder_x, self.intruder_y = target_x, target_y
                 self.is_paused = True
                 self.pause_end_time = current_time + Duration(seconds=self.pause_duration)
@@ -130,7 +132,6 @@ class MockYoloNode(Node):
                 self.intruder_x += (dx / distance_to_wp) * step
                 self.intruder_y += (dy / distance_to_wp) * step
 
-        # Define global coordinate vector mapping
         intruder_global_point = PointStamped()
         intruder_global_point.header.frame_id = 'map'
         intruder_global_point.header.stamp = self.get_clock().now().to_msg()
@@ -138,10 +139,8 @@ class MockYoloNode(Node):
         intruder_global_point.point.y = float(self.intruder_y)
         intruder_global_point.point.z = float(self.intruder_z)
 
-        # Update visualizer
         self.publish_rviz_marker()
 
-        # 2. Iterate perception synthesis for each agent
         for robot in self.robots:
             camera_frame = f'{robot}/oakd_rgb_camera_optical_frame'
             
@@ -150,7 +149,7 @@ class MockYoloNode(Node):
             track_msg.header.frame_id = camera_frame
             track_msg.point.x = 0.0
             track_msg.point.y = 0.0
-            track_msg.point.z = -1.0 # Default lost state
+            track_msg.point.z = -1.0 
             
             try:
                 transform = self.tf_buffer.lookup_transform(
@@ -164,7 +163,6 @@ class MockYoloNode(Node):
                 cx = intruder_cam_point.point.x
                 cz = intruder_cam_point.point.z
                 
-                # Validate spatial bounds and field of view constraints
                 if 0.0 < cz <= self.max_distance:
                     angle_rad = math.atan2(abs(cx), cz)
                     if angle_rad <= self.fov_rad:
@@ -177,8 +175,6 @@ class MockYoloNode(Node):
             self.tracking_pubs[robot].publish(track_msg)
 
 def main(args=None):
-    # --- Internal Topic Remapping ---
-    # Enforces subscription to custom aggregated TF topics seamlessly
     custom_args = [
         '--ros-args', 
         '-r', '/tf:=/rviz/tf', 
