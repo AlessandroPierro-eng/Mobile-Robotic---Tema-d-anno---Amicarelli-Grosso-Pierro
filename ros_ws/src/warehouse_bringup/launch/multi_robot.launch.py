@@ -114,9 +114,8 @@ def generate_launch_description():
             output='screen'
         )
        
-        # IMPORTANT: here is possible to add in the "actions" list yolo_action and tracker_action in order to add the yolo detection  
         ld.add_action(
-            TimerAction(period=nav2_delay, actions=[nav2_action, manager_action, tracker_action])
+            TimerAction(period=nav2_delay, actions=[nav2_action, manager_action, yolo_action, tracker_action])
         )
 
         # Increment temporal offsets for subsequent agents

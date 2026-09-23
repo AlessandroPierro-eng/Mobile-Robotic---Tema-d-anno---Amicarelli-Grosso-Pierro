@@ -1,23 +1,123 @@
-# 🤖 Security Fleet - Mobile Robotics Project
-Benvenuti nel repository del progetto di Robotica Mobile. 
-Il progetto mira a sviluppare un sistema di sicurezza intercettivo basato su una flotta di 3 TurtleBot 4 all'interno di un magazzino simulato.
+# Multi-Agent Surveillance & Pursuit Simulation
 
-## 👥 Team
-* Amicarelli
-* Grosso
-* Pierro
+This repository provides an autonomous multi-agent security and surveillance simulation system developed using **ROS 2**, **Nav2**, and **Gazebo**. It deploys a fleet of three differential-drive **TurtleBot 4** mobile robots inside a shared industrial warehouse environment (`warehouse_gazebo`) to patrol the area, detect a dynamic intruder, and execute a coordinated interception maneuver.
 
-## 🎯 Obiettivi del Progetto
-Il sistema è diviso in tre fasi principali:
-1. **Fase 1 - Ambiente e Robotica:** Creazione del magazzino virtuale in Gazebo Harmonic e modifica dell'URDF del TurtleBot 4 per l'aggiunta di un giunto motorizzato e una telecamera.
-2. **Fase 2 - Localizzazione e Visione:** Implementazione di un filtro EKF per fondere i dati odometrici con le letture degli AprilTag (tramite `apriltag-ros`) e integrazione di YOLOv8 per il riconoscimento visivo degli intrusi.
-3. **Fase 3 - Navigazione (Nav2):** Gestione della navigazione multi-robot per l'esplorazione del magazzino e l'inseguimento del bersaglio.
+## Project Structure
 
-## 🛠️ Tecnologie Utilizzate
-* **OS:** Ubuntu 24.04 (tramite container Docker)
-* **Middleware:** ROS 2 Jazzy Jalisco
-* **Simulatore:** Gazebo Harmonic
-* **Computer Vision:** OpenCV & YOLOv8 (Ultralytics)
+```text
+.
+├── docker_ws/                     # Docker workspace and environment build scripts
+│   ├── Dockerfile.MR05            # Container definition with ROS 2 and Gazebo dependencies
+│   └── build.sh                   # Script to build the Docker image
+├── ros_ws/src/                    # Main ROS 2 workspace containing all project packages
+│   ├── fleet_manager/             # Centralized supervisor and tactical coordination logic
+│   ├── fleet_telemetry/           # Visualizer of speeds, coordination phase and robots' task
+│   ├── turtlebot4/                # TurtleBot 4 description, kinematic models and meshes
+│   ├── warehouse_bringup/         # Multi-robot launch
+│   ├── warehouse_gazebo/          # Warehouse simulation world, 2D occupancy grid, and mock sensors
+│   └── warehouse_robot/           # Package for robot navigation, yolo detection and robot local manager
+├── chown_me.sh                    # Script to fix file ownership permissions from root to host user
+├── exec.sh                        # Script to open an interactive bash session in the running container
+└── run.sh                         # Script to instantiate and run the Docker container
+```
 
-## 🚀 Come avviare l'ambiente di sviluppo
-Abbiamo containerizzato l'intero workspace per garantire la massima riproducibilità. Assicurati di avere **Docker** installato e in esecuzione.
+---
+
+## Operational Architecture
+
+The simulation is divided in two distinct operational stages:
+
+1. **Distributed Surveillance Phase (Nominal Routine):** The three TurtleBot 4 agents explore and monitor the warehouse independently, ensuring optimal visual coverage of the industrial floor.
+
+
+2. **Tactical Coordination Phase (Threat Engagement):** Upon intruder detection, a centralized decision unit (`fleet_manager`) dynamically allocates strategic roles across the fleet:
+
+
+* **Active Interception:** Two robots converge on the target to box it in.
+* **Perimeter Containment:** The third robot navigates to secure and guard the facility's main entrance, cutting off the escape route.
+
+
+
+---
+
+## How to Run the Simulation
+
+### 1. Build the Docker Image
+
+Navigate to the Docker setup directory and build the container image:
+
+```bash
+cd docker_ws
+chmod +x build.sh
+./build.sh
+cd ..
+```
+
+Make sure host execution scripts have executable permissions:
+
+```bash
+chmod +x run.sh exec.sh chown_me.sh
+```
+
+### 2. Run the Docker Container
+
+Start the Docker container with display forwarding enabled:
+
+```bash
+./run.sh
+```
+
+### 3. Build the Workspace and Launch Inside the Container
+
+Once inside the container shell, build and source the packages:
+
+```bash
+cd ~/ros_workspace
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+source /opt/venv/bin/activate
+colcon build
+```
+
+Launch the complete warehouse environment and multi-agent system:
+
+```bash
+ros2 launch warehouse_bringup multi_robot.launch.py use_sim_time:=True
+```
+
+> **Note:** The Gazebo simulation and Nav2 stack initialization may take up to a minute to reach full operational state.
+> **Note:** The Gazebo simulation will start in the Headless mode, without visualization. The visualization must be done using using `rviz2 --ros-args -p use_sim_time:=true -r /tf:=/rviz/tf -r /tf_static:=/rviz/tf_static`
+> **Note:** In order to start the simulation with the standard visualization, the flag `-s` must be removed from line 40 inside `warehouse_gazebo/launch/launch_warehouse.py`. 
+
+To open additional terminals inside the active container:
+
+```bash
+./exec.sh
+```
+
+### 4. RVIZ2 configuration
+
+To achieve comprehensive visualization in RVIZ2, click on 'Add' in the bottom-left corner and then select 'By topic' to add the following elements:
+
+* Under any of the three robots, locate the /map topic and add the 'Map' object. This is the map generated by a LIDAR scan performed during the initial execution with one robot; the same map is used for all three robots.
+
+>***Note:*** After adding the map, it is essential to set the 'Durability Policy' to 'Transient Local' under Displays → Map → Topic. Otherwise, the map will not be visualized correctly, as it is published to the topic only once, at launch. With this setting, RVIZ2 retrieves the map from previously published data.
+
+* Under each of the three robots, locate the /local_costmap/published_footprint topic and add the 'Polygon' object. This displays the position of the corresponding robot on the map.
+
+* Under the /mock_intruder_marker topic, add the 'Marker' object. This represents the position of the mock intruder, which is implemented through a Python node.
+
+### 5. Opening the visualizer in another terminal
+
+Once entered the container thanks to `exec.sh`:
+
+```bash
+cd ~/ros_workspace
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+ros2 run fleet_telemetry visualizer
+```
+
+---
+
+## Video recordings of the simulation are available [here](https://politecnicobari-my.sharepoint.com/my?id=%2Fpersonal%2Fp%5Fgrosso1%5Fstudenti%5Fpoliba%5Fit%2FDocuments%2FMobile%20Robotics&viewid=e10aa2b0%2De910%2D4eea%2Dae22%2D1d5018d5d5b2).
